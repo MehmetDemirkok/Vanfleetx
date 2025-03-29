@@ -3,7 +3,9 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+  throw new Error(
+    'Please define the MONGODB_URI environment variable inside .env'
+  );
 }
 
 interface Cached {
@@ -12,10 +14,7 @@ interface Cached {
 }
 
 declare global {
-  var mongoose: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-  };
+  var mongoose: Cached;
 }
 
 let cached: Cached = global.mongoose || { conn: null, promise: null };
@@ -24,7 +23,7 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-export async function connectToDatabase() {
+async function dbConnect() {
   if (cached.conn) {
     return cached.conn;
   }
@@ -32,6 +31,7 @@ export async function connectToDatabase() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      dbName: 'VanFleetX',
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
@@ -47,4 +47,6 @@ export async function connectToDatabase() {
   }
 
   return cached.conn;
-} 
+}
+
+export default dbConnect; 

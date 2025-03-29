@@ -1,56 +1,91 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose from 'mongoose';
 
-export interface ICargoPost extends Document {
+export interface ICargoPost {
+  userId: string;
   title: string;
-  pickupLocation: string;
-  deliveryLocation: string;
-  cargoType: 'palet' | 'kasa' | 'paket' | 'dökme';
   description: string;
-  status: 'active' | 'inactive' | 'completed';
-  userId: mongoose.Types.ObjectId;
+  origin: string;
+  destination: string;
+  cargoType: string;
+  weight: number;
+  volume: number;
+  price: number;
+  loadingDate: Date;
+  deliveryDate: Date;
+  status: 'active' | 'pending' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
 }
 
 const cargoPostSchema = new mongoose.Schema<ICargoPost>({
+  userId: {
+    type: String,
+    required: true,
+  },
   title: {
     type: String,
-    required: true,
+    required: [true, 'Başlık gerekli'],
     trim: true,
   },
-  pickupLocation: {
+  description: {
     type: String,
-    required: true,
+    required: [true, 'Açıklama gerekli'],
     trim: true,
   },
-  deliveryLocation: {
+  origin: {
     type: String,
-    required: true,
+    required: [true, 'Yükleme yeri gerekli'],
+    trim: true,
+  },
+  destination: {
+    type: String,
+    required: [true, 'Varış yeri gerekli'],
     trim: true,
   },
   cargoType: {
     type: String,
-    required: true,
+    required: [true, 'Yük tipi gerekli'],
     enum: ['palet', 'kasa', 'paket', 'dökme'],
   },
-  description: {
-    type: String,
-    required: true,
-    trim: true,
+  weight: {
+    type: Number,
+    required: [true, 'Ağırlık gerekli'],
+    min: [0, 'Ağırlık 0\'dan büyük olmalı'],
+  },
+  volume: {
+    type: Number,
+    required: [true, 'Hacim gerekli'],
+    min: [0, 'Hacim 0\'dan büyük olmalı'],
+  },
+  price: {
+    type: Number,
+    required: [true, 'Fiyat gerekli'],
+    min: [0, 'Fiyat 0\'dan büyük olmalı'],
+  },
+  loadingDate: {
+    type: Date,
+    required: [true, 'Yükleme tarihi gerekli'],
+  },
+  deliveryDate: {
+    type: Date,
+    required: [true, 'Teslimat tarihi gerekli'],
   },
   status: {
     type: String,
-    required: true,
-    enum: ['active', 'inactive', 'completed'],
+    enum: ['active', 'pending', 'completed', 'cancelled'],
     default: 'active',
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
+  createdAt: {
+    type: Date,
+    default: Date.now,
   },
-}, {
-  timestamps: true,
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-export const CargoPost = mongoose.models.CargoPost || mongoose.model<ICargoPost>('CargoPost', cargoPostSchema); 
+// Mongoose modeli daha önce tanımlanmış mı kontrol et
+const CargoPost = mongoose.models.CargoPost || mongoose.model<ICargoPost>('CargoPost', cargoPostSchema);
+
+export default CargoPost; 

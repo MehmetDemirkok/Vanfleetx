@@ -1,19 +1,16 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
-import { connectToDatabase } from '@/lib/mongodb';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { EmptyTruckPost } from '@/models/EmptyTruckPost';
+import TruckPost from '@/models/TruckPost';
+import dbConnect from '@/lib/dbConnect';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    await connectToDatabase();
-    const truckPosts = await EmptyTruckPost.find({})
-      .sort({ createdAt: -1 })
-      .populate('company', 'name');
-    
-    return NextResponse.json(truckPosts);
+    await dbConnect();
+    const posts = await TruckPost.find().sort({ createdAt: -1 });
+    return NextResponse.json(posts);
   } catch (error) {
-    console.error('Error fetching truck posts:', error);
     return NextResponse.json(
       { error: 'Failed to fetch truck posts' },
       { status: 500 }
@@ -24,6 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -31,16 +29,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    await connectToDatabase();
+    await dbConnect();
+    const data = await request.json();
 
-    const truckPost = await EmptyTruckPost.create({
-      ...body,
-      company: session.user.id,
-      status: 'ACTIVE',
+    const post = await TruckPost.create({
+      ...data,
+      userId: session.user.id,
+      status: 'active'
     });
 
-    return NextResponse.json(truckPost, { status: 201 });
+    return NextResponse.json(post);
   } catch (error) {
     console.error('Error creating truck post:', error);
     return NextResponse.json(

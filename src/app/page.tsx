@@ -1,7 +1,40 @@
-import Link from 'next/link';
-import { TruckIcon, BuildingOfficeIcon, PhoneIcon } from '@heroicons/react/24/outline';
+'use client';
 
-export default function Home() {
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { TruckIcon, BuildingOfficeIcon, PhoneIcon, ShieldCheckIcon, ClockIcon } from '@heroicons/react/24/outline';
+
+export default function HomePage() {
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  const handleGetStarted = () => {
+    if (!session) {
+      router.push('/auth/signup');
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  const features = [
+    {
+      icon: TruckIcon,
+      title: 'Geniş Araç Ağı',
+      description: 'Türkiye\'nin her yerinden binlerce araç ve yük ilanı arasından seçim yapın.'
+    },
+    {
+      icon: ShieldCheckIcon,
+      title: 'Güvenli Taşımacılık',
+      description: 'Güvenilir taşımacılar ve müşterilerle çalışın, risksiz teslimat yapın.'
+    },
+    {
+      icon: ClockIcon,
+      title: 'Hızlı Eşleşme',
+      description: 'Akıllı eşleştirme sistemi ile ihtiyacınıza uygun araç veya yükü hemen bulun.'
+    }
+  ];
+
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
@@ -19,12 +52,12 @@ export default function Home() {
               Türkiye'nin en kapsamlı yük ve kamyon ilan platformu ile taşımacılık artık daha kolay
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Link
-                href="/auth/signup"
-                className="rounded-md bg-[#4263eb] px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-[#364fc7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4263eb] transition-all"
+              <button
+                onClick={handleGetStarted}
+                className="rounded-md bg-[#4263eb] px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-[#364fc7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4263eb] transition-colors duration-200"
               >
                 Hemen Başla
-              </Link>
+              </button>
               <Link
                 href="/about"
                 className="text-lg font-semibold leading-6 text-gray-900 hover:text-[#4263eb] transition-all"
@@ -37,70 +70,34 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Yük İlanları */}
-          <div className="relative group">
-            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-[#4263eb] to-[#9089fc] opacity-25 blur transition group-hover:opacity-75" />
-            <div className="relative bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-center w-12 h-12 bg-[#4263eb]/10 rounded-lg mb-4">
-                <TruckIcon className="w-6 h-6 text-[#4263eb]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Yük İlanları</h3>
-              <p className="text-gray-600 mb-4">
-                Binlerce yük ilanı arasından size uygun olanı seçin veya kendi yük ilanınızı oluşturun.
-              </p>
-              <Link
-                href="/cargo-posts"
-                className="inline-flex items-center text-[#4263eb] hover:text-[#364fc7] transition-all"
-              >
-                İlanları Görüntüle
-                <span className="ml-2">→</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Kamyon İlanları */}
-          <div className="relative group">
-            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-[#4263eb] to-[#9089fc] opacity-25 blur transition group-hover:opacity-75" />
-            <div className="relative bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-center w-12 h-12 bg-[#4263eb]/10 rounded-lg mb-4">
-                <BuildingOfficeIcon className="w-6 h-6 text-[#4263eb]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Kamyon İlanları</h3>
-              <p className="text-gray-600 mb-4">
-                Boş kamyonunuz için yük bulun veya ihtiyacınız olan kamyon için ilan verin.
-              </p>
-              <Link
-                href="/truck-posts"
-                className="inline-flex items-center text-[#4263eb] hover:text-[#364fc7] transition-all"
-              >
-                İlanları Görüntüle
-                <span className="ml-2">→</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Hızlı İletişim */}
-          <div className="relative group">
-            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-[#4263eb] to-[#9089fc] opacity-25 blur transition group-hover:opacity-75" />
-            <div className="relative bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-center w-12 h-12 bg-[#4263eb]/10 rounded-lg mb-4">
-                <PhoneIcon className="w-6 h-6 text-[#4263eb]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Hızlı İletişim</h3>
-              <p className="text-gray-600 mb-4">
-                7/24 müşteri hizmetlerimiz ile sorularınıza anında yanıt alın.
-              </p>
-              <Link
-                href="/contact"
-                className="inline-flex items-center text-[#4263eb] hover:text-[#364fc7] transition-all"
-              >
-                Bize Ulaşın
-                <span className="ml-2">→</span>
-              </Link>
-            </div>
-          </div>
+      <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24 sm:py-32">
+        <div className="mx-auto max-w-2xl lg:text-center">
+          <h2 className="text-base font-semibold leading-7 text-[#4263eb]">Daha Hızlı Teslimat</h2>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            Lojistiği Kolaylaştırıyoruz
+          </p>
+          <p className="mt-6 text-lg leading-8 text-gray-600">
+            VanFleetX ile lojistik süreçlerinizi dijitalleştirin, maliyetlerinizi düşürün ve 
+            operasyonlarınızı optimize edin.
+          </p>
+        </div>
+        <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+          <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div key={feature.title} className="flex flex-col">
+                  <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
+                    <Icon className="h-5 w-5 flex-none text-[#4263eb]" />
+                    {feature.title}
+                  </dt>
+                  <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
+                    <p className="flex-auto">{feature.description}</p>
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
         </div>
       </div>
 
