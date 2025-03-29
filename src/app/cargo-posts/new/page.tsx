@@ -1,264 +1,406 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { TR, BG, RO } from 'country-flag-icons/react/3x2';
+import { MapPinIcon, TruckIcon, ScaleIcon, CurrencyLiraIcon, CalendarIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+
+// Türkiye şehirleri
+const turkiyeCities = [
+  'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin', 'Aydın', 'Balıkesir',
+  'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli',
+  'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari',
+  'Hatay', 'Isparta', 'Mersin', 'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir',
+  'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
+  'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas', 'Tekirdağ', 'Tokat',
+  'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt', 'Karaman',
+  'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük', 'Kilis', 'Osmaniye', 'Düzce'
+];
+
+// Bulgaristan şehirleri
+const bulgarianCities = [
+  'Sofya', 'Plovdiv', 'Varna', 'Burgaz', 'Ruse', 'Stara Zagora', 'Pleven', 'Sliven', 'Dobrich', 'Şumnu',
+  'Pernik', 'Haskovo', 'Yambol', 'Pazarcık', 'Blagoevgrad', 'Veliko Tarnovo', 'Vratsa', 'Gabrovo', 'Asenovgrad', 'Vidin'
+];
+
+// Romanya şehirleri
+const romanianCities = [
+  'Bükreş', 'Cluj-Napoca', 'Timişoara', 'Iaşi', 'Constanţa', 'Craiova', 'Braşov', 'Galaţi', 'Ploieşti', 'Oradea',
+  'Brăila', 'Arad', 'Piteşti', 'Sibiu', 'Bacău', 'Târgu Mureş', 'Baia Mare', 'Buzău', 'Botoşani', 'Satu Mare'
+];
+
+interface FormData {
+  title: string;
+  loadingCountry: string;
+  loadingCity: string;
+  deliveryCountry: string;
+  deliveryCity: string;
+  cargoType: string;
+  weight: string;
+  volume: string;
+  price: string;
+  loadingDate: string;
+  description: string;
+  palletCount?: string;
+  palletType?: string;
+}
 
 export default function NewCargoPost() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    title: '',
+    loadingCountry: 'Türkiye',
+    loadingCity: '',
+    deliveryCountry: 'Türkiye',
+    deliveryCity: '',
+    cargoType: '',
+    weight: '',
+    volume: '',
+    price: '',
+    loadingDate: '',
+    description: '',
+    palletCount: '',
+    palletType: ''
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const getCitiesByCountry = (country: string) => {
+    switch (country) {
+      case 'Türkiye':
+        return turkiyeCities;
+      case 'Bulgaristan':
+        return bulgarianCities;
+      case 'Romanya':
+        return romanianCities;
+      default:
+        return [];
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // Ülke değiştiğinde şehri sıfırla
+      if (name === 'loadingCountry') {
+        newData.loadingCity = '';
+      } else if (name === 'deliveryCountry') {
+        newData.deliveryCity = '';
+      }
+      
+      return newData;
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-
-    // Form verilerini düzenle
-    const processedData = {
-      ...data,
-      origin: data.pickupLocation,
-      destination: data.deliveryLocation,
-      weight: Number(data.weight),
-      volume: Number(data.volume),
-      price: Number(data.price),
-      loadingDate: data.loadingDate ? new Date(data.loadingDate as string).toISOString() : undefined,
-      deliveryDate: data.deliveryDate ? new Date(data.deliveryDate as string).toISOString() : undefined,
-    };
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
 
     try {
+      setIsSubmitting(true);
       const response = await fetch('/api/cargo-posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(processedData),
+        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'İlan oluşturulurken bir hata oluştu');
+      if (response.ok) {
+        router.push('/cargo-posts');
+      } else {
+        throw new Error('İlan oluşturulurken bir hata oluştu');
       }
-
-      router.push('/cargo-posts');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('İlan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="py-6">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">Yeni Yük İlanı</h1>
-          <Link
-            href="/cargo-posts"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          <button
+            onClick={() => router.back()}
+            className="text-gray-600 hover:text-gray-900 text-sm font-medium"
           >
             Geri Dön
-          </Link>
+          </button>
         </div>
-      </div>
 
-      <div className="mt-8">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="bg-white shadow sm:rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              {error && (
-                <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  {error}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* İlan Başlığı */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-4">
+              İlan Başlığı
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              placeholder="Örn: İstanbul - Ankara Yük Taşıma"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+              required
+            />
+          </div>
+
+          {/* Yükleme ve Teslimat Bilgileri */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Lokasyon Bilgileri</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Yükleme Lokasyonu */}
+              <div className="space-y-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Yükleme Lokasyonu
+                </label>
+                <div className="space-y-3">
+                  <select
+                    name="loadingCountry"
+                    value={formData.loadingCountry}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  >
+                    <option value="Türkiye">Türkiye</option>
+                    <option value="Bulgaristan">Bulgaristan</option>
+                    <option value="Romanya">Romanya</option>
+                  </select>
+                  <select
+                    name="loadingCity"
+                    value={formData.loadingCity}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  >
+                    <option value="">Şehir Seçin</option>
+                    {getCitiesByCountry(formData.loadingCountry).map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
+              </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Teslimat Lokasyonu */}
+              <div className="space-y-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Teslimat Lokasyonu
+                </label>
+                <div className="space-y-3">
+                  <select
+                    name="deliveryCountry"
+                    value={formData.deliveryCountry}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  >
+                    <option value="Türkiye">Türkiye</option>
+                    <option value="Bulgaristan">Bulgaristan</option>
+                    <option value="Romanya">Romanya</option>
+                  </select>
+                  <select
+                    name="deliveryCity"
+                    value={formData.deliveryCity}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  >
+                    <option value="">Şehir Seçin</option>
+                    {getCitiesByCountry(formData.deliveryCountry).map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Yük Detayları */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Yük Detayları</h2>
+            
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Yük Tipi */}
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                    İlan Başlığı
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      type="text"
-                      name="title"
-                      id="title"
-                      required
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      placeholder="Örn: İstanbul - Ankara Yük Taşıma"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="pickupLocation" className="block text-sm font-medium text-gray-700">
-                      Yükleme Lokasyonu
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="pickupLocation"
-                        id="pickupLocation"
-                        required
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        placeholder="Örn: İstanbul, Türkiye"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="deliveryLocation" className="block text-sm font-medium text-gray-700">
-                      Teslimat Lokasyonu
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        name="deliveryLocation"
-                        id="deliveryLocation"
-                        required
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                        placeholder="Örn: Ankara, Türkiye"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="cargoType" className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Yük Tipi
                   </label>
-                  <div className="mt-1">
+                  <select
+                    name="cargoType"
+                    value={formData.cargoType}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  >
+                    <option value="">Seçiniz</option>
+                    <option value="palet">Palet</option>
+                    <option value="koli">Koli</option>
+                    <option value="konteyner">Konteyner</option>
+                    <option value="dökme">Dökme Yük</option>
+                    <option value="parsiyel">Parsiyel</option>
+                  </select>
+                </div>
+
+                {/* Ağırlık */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ağırlık (kg)
+                  </label>
+                  <input
+                    type="number"
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  />
+                </div>
+
+                {/* Hacim */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Hacim (m³)
+                  </label>
+                  <input
+                    type="number"
+                    name="volume"
+                    value={formData.volume}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Palet Detayları - Sadece Yük Tipi "palet" seçiliyse göster */}
+              {formData.cargoType === 'palet' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
+                  {/* Palet Sayısı */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Palet Sayısı
+                    </label>
+                    <input
+                      type="number"
+                      name="palletCount"
+                      value={formData.palletCount}
+                      onChange={handleChange}
+                      placeholder="Palet adedi giriniz"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                      required={formData.cargoType === 'palet'}
+                    />
+                  </div>
+                  
+                  {/* Palet Tipi */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Palet Tipi
+                    </label>
                     <select
-                      id="cargoType"
-                      name="cargoType"
-                      required
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      name="palletType"
+                      value={formData.palletType}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                      required={formData.cargoType === 'palet'}
                     >
                       <option value="">Seçiniz</option>
-                      <option value="palet">Palet</option>
-                      <option value="kasa">Kasa</option>
-                      <option value="paket">Paket</option>
-                      <option value="dökme">Dökme</option>
+                      <option value="euro">Euro Palet</option>
+                      <option value="industrial">Endüstriyel Palet</option>
+                      <option value="plastic">Plastik Palet</option>
+                      <option value="wooden">Ahşap Palet</option>
+                      <option value="other">Diğer</option>
                     </select>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                  <div>
-                    <label htmlFor="weight" className="block text-sm font-medium text-gray-700">
-                      Ağırlık (kg)
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="number"
-                        name="weight"
-                        id="weight"
-                        required
-                        min="0"
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="volume" className="block text-sm font-medium text-gray-700">
-                      Hacim (m³)
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="number"
-                        name="volume"
-                        id="volume"
-                        required
-                        min="0"
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                      Fiyat (₺)
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="number"
-                        name="price"
-                        id="price"
-                        required
-                        min="0"
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="loadingDate" className="block text-sm font-medium text-gray-700">
-                      Yükleme Tarihi
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="date"
-                        name="loadingDate"
-                        id="loadingDate"
-                        required
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="deliveryDate" className="block text-sm font-medium text-gray-700">
-                      Teslimat Tarihi
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="date"
-                        name="deliveryDate"
-                        id="deliveryDate"
-                        required
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                    Açıklama
-                  </label>
-                  <div className="mt-1">
-                    <textarea
-                      id="description"
-                      name="description"
-                      rows={4}
-                      required
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      placeholder="Yük hakkında detaylı bilgi..."
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Yükleniyor...' : 'İlanı Yayınla'}
-                  </button>
-                </div>
-              </form>
+              )}
             </div>
           </div>
-        </div>
+
+          {/* Tarih ve Fiyat Bilgileri */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Tarih ve Fiyat Bilgileri</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Yükleme Tarihi */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Yükleme Tarihi
+                </label>
+                <input
+                  type="date"
+                  name="loadingDate"
+                  value={formData.loadingDate}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                  required
+                />
+              </div>
+
+              {/* Fiyat */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fiyat (₺)
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Açıklama */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Açıklama
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Yük hakkında detaylı bilgi verin..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+            />
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200 text-sm font-medium"
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-[#4263eb] text-white rounded-md hover:bg-[#364fc7] transition-colors duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Gönderiliyor...' : 'İlanı Yayınla'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
