@@ -12,6 +12,8 @@ import {
   EnvelopeIcon,
   StarIcon,
   PlusIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardStats {
@@ -28,31 +30,44 @@ interface Activity {
   status: 'success' | 'ongoing' | 'pending';
 }
 
+interface Post {
+  _id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  type: 'cargo' | 'truck';
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [statsResponse, activitiesResponse] = await Promise.all([
+        const [statsResponse, activitiesResponse, postsResponse] = await Promise.all([
           fetch('/api/dashboard/stats'),
-          fetch('/api/dashboard/activities')
+          fetch('/api/dashboard/activities'),
+          fetch('/api/truck-posts')
         ]);
 
-        if (!statsResponse.ok || !activitiesResponse.ok) {
+        if (!statsResponse.ok || !activitiesResponse.ok || !postsResponse.ok) {
           throw new Error('Failed to fetch dashboard data');
         }
 
         const statsData = await statsResponse.json();
         const activitiesData = await activitiesResponse.json();
+        const postsData = await postsResponse.json();
 
         setStats(statsData);
         setActivities(activitiesData);
+        setPosts(postsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bir hata oluştu');
       } finally {
@@ -64,6 +79,40 @@ export default function DashboardPage() {
       fetchDashboardData();
     }
   }, [session]);
+
+  const handleEdit = (postId: string) => {
+    router.push(`/dashboard/edit-post/${postId}`);
+  };
+
+  const handleDelete = async (postId: string) => {
+    if (window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
+      setIsDeleting(true);
+      try {
+        const response = await fetch(`/api/truck-posts?id=${postId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete post');
+        }
+
+        // İlanı listeden kaldır
+        setPosts(posts.filter(post => post._id !== postId));
+        
+        // İstatistikleri güncelle
+        if (stats) {
+          setStats({
+            ...stats,
+            activePosts: stats.activePosts - 1
+          });
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'İlan silinirken bir hata oluştu');
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
 
   if (status === 'loading' || loading) {
     return (
@@ -144,6 +193,72 @@ export default function DashboardPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* İlanlarım */}
+        <div className="bg-white rounded-lg shadow-sm mb-8">
+          <div className="p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">İlanlarım</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      İlan Başlığı
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Durum
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tarih
+                    </th>
+                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      İşlemler
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {posts.map((post) => (
+                    <tr key={post._id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {post.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          post.status === 'active' ? 'bg-green-100 text-green-800' :
+                          post.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {post.status === 'active' ? 'Aktif' :
+                           post.status === 'pending' ? 'Beklemede' :
+                           'Tamamlandı'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString('tr-TR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleEdit(post._id)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                          disabled={isDeleting}
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(post._id)}
+                          className="text-red-600 hover:text-red-900"
+                          disabled={isDeleting}
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* Main Content Grid */}
