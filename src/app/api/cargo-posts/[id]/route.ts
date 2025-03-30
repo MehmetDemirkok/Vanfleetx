@@ -1,117 +1,146 @@
 import { NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db';
+import { CargoPost } from '@/lib/models/cargo-post.model';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
-import { connectToDatabase } from '@/lib/mongodb';
-import { CargoPost } from '@/models/CargoPost';
+import { authOptions } from '@/lib/auth';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+interface RouteParams {
+  params: {
+    id: string;
+  };
+}
+
+export async function GET(request: Request, { params }: RouteParams) {
   try {
     await connectToDatabase();
-    const cargoPost = await CargoPost.findById(params.id);
-    
-    if (!cargoPost) {
+
+    const post = await CargoPost.findById(params.id)
+      .populate({
+        path: 'createdBy',
+        select: 'name email phone',
+        model: 'User'
+      })
+      .lean();
+
+    if (!post) {
       return NextResponse.json(
         { error: 'Cargo post not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(cargoPost);
+    return NextResponse.json({
+      ...post,
+      _id: post._id.toString(),
+      createdAt: post.createdAt?.toISOString(),
+      updatedAt: post.updatedAt?.toISOString(),
+      createdBy: post.createdBy ? {
+        ...post.createdBy,
+        _id: post.createdBy._id.toString()
+      } : null
+    });
   } catch (error) {
     console.error('Error fetching cargo post:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch cargo post' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    await connectToDatabase();
+
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    await connectToDatabase();
-    const cargoPost = await CargoPost.findById(params.id);
+    const data = await request.json();
+    const post = await CargoPost.findById(params.id);
 
-    if (!cargoPost) {
+    if (!post) {
       return NextResponse.json(
         { error: 'Cargo post not found' },
         { status: 404 }
       );
     }
 
-    if (cargoPost.userId.toString() !== session.user.id) {
+    if (post.createdBy.toString() !== session.user.id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Forbidden' },
         { status: 403 }
       );
     }
 
-    const body = await request.json();
-    const updatedCargoPost = await CargoPost.findByIdAndUpdate(
+    const updatedPost = await CargoPost.findByIdAndUpdate(
       params.id,
-      body,
+      { ...data },
       { new: true }
-    );
+    ).populate({
+      path: 'createdBy',
+      select: 'name email phone',
+      model: 'User'
+    });
 
-    return NextResponse.json(updatedCargoPost);
+    return NextResponse.json({
+      ...updatedPost!.toObject(),
+      _id: updatedPost!._id.toString(),
+      createdAt: updatedPost!.createdAt?.toISOString(),
+      updatedAt: updatedPost!.updatedAt?.toISOString(),
+      createdBy: updatedPost!.createdBy ? {
+        ...updatedPost!.createdBy,
+        _id: updatedPost!.createdBy._id.toString()
+      } : null
+    });
   } catch (error) {
     console.error('Error updating cargo post:', error);
     return NextResponse.json(
-      { error: 'Failed to update cargo post' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    await connectToDatabase();
+
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    await connectToDatabase();
-    const cargoPost = await CargoPost.findById(params.id);
+    const post = await CargoPost.findById(params.id);
 
-    if (!cargoPost) {
+    if (!post) {
       return NextResponse.json(
         { error: 'Cargo post not found' },
         { status: 404 }
       );
     }
 
-    if (cargoPost.userId.toString() !== session.user.id) {
+    if (post.createdBy.toString() !== session.user.id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Forbidden' },
         { status: 403 }
       );
     }
 
     await CargoPost.findByIdAndDelete(params.id);
+
     return NextResponse.json({ message: 'Cargo post deleted successfully' });
   } catch (error) {
     console.error('Error deleting cargo post:', error);
     return NextResponse.json(
-      { error: 'Failed to delete cargo post' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }

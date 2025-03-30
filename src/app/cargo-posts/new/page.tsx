@@ -34,13 +34,16 @@ interface FormData {
   title: string;
   loadingCountry: string;
   loadingCity: string;
+  loadingAddress: string;
   deliveryCountry: string;
   deliveryCity: string;
+  unloadingAddress: string;
   cargoType: string;
   weight: string;
   volume: string;
   price: string;
   loadingDate: string;
+  unloadingDate: string;
   description: string;
   palletCount?: string;
   palletType?: string;
@@ -54,13 +57,16 @@ export default function NewCargoPost() {
     title: '',
     loadingCountry: 'Türkiye',
     loadingCity: '',
+    loadingAddress: '',
     deliveryCountry: 'Türkiye',
     deliveryCity: '',
+    unloadingAddress: '',
     cargoType: '',
     weight: '',
     volume: '',
     price: '',
     loadingDate: '',
+    unloadingDate: '',
     description: '',
     palletCount: '',
     palletType: ''
@@ -189,6 +195,15 @@ export default function NewCargoPost() {
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
+                  <input
+                    type="text"
+                    name="loadingAddress"
+                    value={formData.loadingAddress}
+                    onChange={handleChange}
+                    placeholder="Yükleme Adresi"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  />
                 </div>
               </div>
 
@@ -221,6 +236,15 @@ export default function NewCargoPost() {
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
+                  <input
+                    type="text"
+                    name="unloadingAddress"
+                    value={formData.unloadingAddress}
+                    onChange={handleChange}
+                    placeholder="Teslimat Adresi"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  />
                 </div>
               </div>
             </div>
@@ -330,18 +354,16 @@ export default function NewCargoPost() {
             </div>
           </div>
 
-          {/* Tarih ve Fiyat Bilgileri */}
+          {/* Tarih Bilgileri */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Tarih ve Fiyat Bilgileri</h2>
-            
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Tarih Bilgileri</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Yükleme Tarihi */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Yükleme Tarihi
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   name="loadingDate"
                   value={formData.loadingDate}
                   onChange={handleChange}
@@ -349,7 +371,27 @@ export default function NewCargoPost() {
                   required
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Teslimat Tarihi
+                </label>
+                <input
+                  type="datetime-local"
+                  name="unloadingDate"
+                  value={formData.unloadingDate}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                  required
+                />
+              </div>
+            </div>
+          </div>
 
+          {/* Fiyat Bilgileri */}
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">Fiyat Bilgileri</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Fiyat */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
