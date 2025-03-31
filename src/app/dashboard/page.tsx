@@ -1,24 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import {
-  TruckIcon,
-  ArchiveBoxIcon,
-  ChartBarIcon,
-  BellIcon,
-  EnvelopeIcon,
-  StarIcon,
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
-} from '@heroicons/react/24/outline';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Icons } from '@/components/icons';
+import { toast } from 'sonner';
 
 interface DashboardStats {
   activePosts: number;
-  totalShipments: number;
+  completedShipments: number;
   unreadMessages: number;
 }
 
@@ -31,338 +25,237 @@ interface Activity {
 }
 
 interface Post {
-  _id: string;
+  id: string;
   title: string;
-  status: string;
-  createdAt: string;
-  type: 'cargo' | 'truck';
+  type: string;
+  date: string;
+  status: 'success' | 'ongoing' | 'pending';
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login');
+    }
+  }, [status, router]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [statsResponse, activitiesResponse, postsResponse] = await Promise.all([
-          fetch('/api/dashboard/stats'),
-          fetch('/api/dashboard/activities'),
-          fetch('/api/truck-posts')
-        ]);
-
-        if (!statsResponse.ok || !activitiesResponse.ok || !postsResponse.ok) {
-          throw new Error('Failed to fetch dashboard data');
-        }
-
+        setIsLoading(true);
+        
+        // Fetch stats
+        const statsResponse = await fetch('/api/dashboard/stats');
+        if (!statsResponse.ok) throw new Error('Failed to fetch stats');
         const statsData = await statsResponse.json();
-        const activitiesData = await activitiesResponse.json();
-        const postsData = await postsResponse.json();
-
         setStats(statsData);
+
+        // Fetch activities
+        const activitiesResponse = await fetch('/api/dashboard/activities');
+        if (!activitiesResponse.ok) throw new Error('Failed to fetch activities');
+        const activitiesData = await activitiesResponse.json();
         setActivities(activitiesData);
-        setPosts(postsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+        setPosts(activitiesData);
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast.error('Dashboard verilerini getirirken bir hata oluştu.');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    if (session) {
+    if (session?.user) {
       fetchDashboardData();
     }
   }, [session]);
 
-  const handleEdit = (postId: string) => {
-    router.push(`/dashboard/edit-post/${postId}`);
-  };
-
-  const handleDelete = async (postId: string) => {
-    if (window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
-      setIsDeleting(true);
-      try {
-        const response = await fetch(`/api/truck-posts?id=${postId}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete post');
-        }
-
-        // İlanı listeden kaldır
-        setPosts(posts.filter(post => post._id !== postId));
-        
-        // İstatistikleri güncelle
-        if (stats) {
-          setStats({
-            ...stats,
-            activePosts: stats.activePosts - 1
-          });
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'İlan silinirken bir hata oluştu');
-      } finally {
-        setIsDeleting(false);
-      }
-    }
-  };
-
-  if (status === 'loading' || loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4263eb]"></div>
-      </div>
-    );
+  if (status === 'loading' || !session) {
+    return <div>Loading...</div>;
   }
-
-  if (!session) {
-    router.push('/auth/signin');
-    return null;
-  }
-
-  const statsData = [
-    { name: 'Aktif İlanlarım', value: stats?.activePosts || '0', icon: TruckIcon },
-    { name: 'Toplam Taşıma', value: stats?.totalShipments || '0', icon: ArchiveBoxIcon },
-    { name: 'Ortalama Puan', value: '4.8', icon: StarIcon },
-    { name: 'Okunmamış Mesaj', value: stats?.unreadMessages || '0', icon: EnvelopeIcon },
-  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">
-              Hoş Geldin, {session.user?.name || 'Kullanıcı'}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container max-w-6xl mx-auto p-4 space-y-6">
+        {/* Logo ve Hoşgeldin Mesajı */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-[#4263eb]">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+            </svg>
+            <span className="text-xl font-bold">VanFleetX</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Hoş Geldin, {session.user?.name}
             </h1>
-            <p className="text-gray-600 mt-1">
-              İlanlarını ve aktivitelerini buradan takip edebilirsin
+            <p className="text-gray-600">
+              İşte bugünkü istatistikler ve son aktivitelerin
             </p>
           </div>
-          <Link
-            href="/dashboard/create-post"
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Yeni İlan Oluştur
-          </Link>
         </div>
-
-        {error && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          {statsData.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={stat.name}
-                className="bg-white overflow-hidden rounded-lg shadow-sm hover:shadow transition-shadow duration-200"
-              >
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Icon className="h-6 w-6 text-[#4263eb]" />
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          {stat.name}
-                        </dt>
-                        <dd className="flex items-baseline">
-                          <div className="text-2xl font-semibold text-gray-900">
-                            {stat.value}
-                          </div>
-                        </dd>
-                      </dl>
-                    </div>
-                  </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="p-6 bg-white border border-gray-200">
+            {isLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : (
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <Icons.post className="h-6 w-6 text-[#4263eb]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Aktif İlanlar</p>
+                  <h2 className="text-3xl font-bold text-gray-900">{stats?.activePosts || 0}</h2>
                 </div>
               </div>
-            );
-          })}
+            )}
+          </Card>
+
+          <Card className="p-6 bg-white border border-gray-200">
+            {isLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : (
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <Icons.check className="h-6 w-6 text-[#4263eb]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Tamamlanan Taşımalar</p>
+                  <h2 className="text-3xl font-bold text-gray-900">{stats?.completedShipments || 0}</h2>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6 bg-white border border-gray-200">
+            {isLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : (
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <Icons.message className="h-6 w-6 text-[#4263eb]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Okunmamış Mesajlar</p>
+                  <h2 className="text-3xl font-bold text-gray-900">{stats?.unreadMessages || 0}</h2>
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
 
-        {/* İlanlarım */}
-        <div className="bg-white rounded-lg shadow-sm mb-8">
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">İlanlarım</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İlan Başlığı
-                    </th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Durum
-                    </th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tarih
-                    </th>
-                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {posts.map((post) => (
-                    <tr key={post._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {post.title}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          post.status === 'active' ? 'bg-green-100 text-green-800' :
-                          post.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {post.status === 'active' ? 'Aktif' :
-                           post.status === 'pending' ? 'Beklemede' :
-                           'Tamamlandı'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(post.createdAt).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(post._id)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                          disabled={isDeleting}
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(post._id)}
-                          className="text-red-600 hover:text-red-900"
-                          disabled={isDeleting}
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid gap-6 md:grid-cols-2">
           {/* Recent Activities */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Son Aktiviteler</h2>
-                <div className="flow-root">
-                  <ul className="-mb-8">
-                    {activities.map((activity, activityIdx) => (
-                      <li key={activity.id}>
-                        <div className="relative pb-8">
-                          {activityIdx !== activities.length - 1 ? (
-                            <span
-                              className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span
-                                className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
-                                  activity.status === 'success'
-                                    ? 'bg-green-500'
-                                    : activity.status === 'ongoing'
-                                    ? 'bg-blue-500'
-                                    : 'bg-yellow-500'
-                                }`}
-                              >
-                                <ChartBarIcon className="h-5 w-5 text-white" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div>
-                                <div className="text-sm">
-                                  <a href="#" className="font-medium text-gray-900">
-                                    {activity.title}
-                                  </a>
-                                </div>
-                                <p className="mt-0.5 text-sm text-gray-500">
-                                  {activity.type} • {activity.date}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="mt-6">
-                  <button
-                    onClick={() => router.push('/activities')}
-                    className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
-                  >
-                    Tüm Aktiviteleri Görüntüle
-                  </button>
-                </div>
+          <Card className="bg-white border border-gray-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Son Aktiviteler</h2>
+                <Button variant="ghost" size="sm" className="text-[#4263eb] hover:text-[#364fc7]">
+                  Tümünü Gör
+                  <Icons.arrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
-            </div>
-          </div>
-
-          {/* Notifications */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-medium text-gray-900">Bildirimler</h2>
-                  <span className="bg-[#4263eb] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    {stats?.unreadMessages || 0} Yeni
-                  </span>
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
-                <div className="flow-root">
-                  <ul className="divide-y divide-gray-200">
-                    <li className="py-4">
+              ) : activities.length > 0 ? (
+                <div className="space-y-4">
+                  {activities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                    >
                       <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          <BellIcon className="h-6 w-6 text-[#4263eb]" />
+                        <div className="p-2 rounded-full bg-blue-50">
+                          {activity.type === 'Yük İlanı' ? (
+                            <Icons.post className="h-4 w-4 text-[#4263eb]" />
+                          ) : (
+                            <Icons.truck className="h-4 w-4 text-[#4263eb]" />
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            Henüz bildirim bulunmuyor
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Yeni bildirimler burada görüntülenecek
-                          </p>
+                        <div className="space-y-1">
+                          <p className="font-medium line-clamp-1 text-gray-900">{activity.title}</p>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <span>{activity.type}</span>
+                            <span className="mx-2">•</span>
+                            <span>{activity.date}</span>
+                          </div>
                         </div>
                       </div>
-                    </li>
-                  </ul>
+                      <Badge
+                        variant={
+                          activity.status === 'success'
+                            ? 'success'
+                            : activity.status === 'ongoing'
+                            ? 'default'
+                            : 'secondary'
+                        }
+                        className="ml-2"
+                      >
+                        {activity.status === 'success'
+                          ? 'Tamamlandı'
+                          : activity.status === 'ongoing'
+                          ? 'Devam Ediyor'
+                          : 'Beklemede'}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-                <div className="mt-6">
-                  <button
-                    onClick={() => router.push('/notifications')}
-                    className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
-                  >
-                    Tüm Bildirimleri Görüntüle
-                  </button>
+              ) : (
+                <div className="text-center py-6 text-gray-600">
+                  Henüz aktivite bulunmuyor
                 </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="bg-white border border-gray-200">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Hızlı İşlemler</h2>
+              <div className="grid gap-4">
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex items-center justify-start space-x-4 border-gray-200 hover:bg-gray-50"
+                  onClick={() => router.push('/cargo-posts/new')}
+                >
+                  <div className="p-2 rounded-full bg-blue-50">
+                    <Icons.plus className="h-4 w-4 text-[#4263eb]" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium text-gray-900">Yeni Yük İlanı</span>
+                    <span className="text-sm text-gray-600">Yük ilanı oluştur ve teklif al</span>
+                  </div>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="h-auto p-4 flex items-center justify-start space-x-4 border-gray-200 hover:bg-gray-50"
+                  onClick={() => router.push('/truck-posts/new')}
+                >
+                  <div className="p-2 rounded-full bg-blue-50">
+                    <Icons.plus className="h-4 w-4 text-[#4263eb]" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium text-gray-900">Yeni Araç İlanı</span>
+                    <span className="text-sm text-gray-600">Araç ilanı oluştur ve yük bul</span>
+                  </div>
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

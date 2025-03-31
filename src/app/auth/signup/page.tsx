@@ -3,17 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AtSymbolIcon, LockClosedIcon, BuildingOfficeIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 
 export default function SignUp() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     password: '',
     companyName: '',
-    companyType: 'LOGISTICS',
-    phone: '',
-    address: '',
+    country: '',
+    acceptTerms: false,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,176 +20,199 @@ export default function SignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.acceptTerms) {
+      setError('Gizlilik politikasını kabul etmelisiniz');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Kayıt işlemi başarısız oldu');
+        throw new Error(data.message || 'Kayıt olurken bir hata oluştu');
       }
 
       router.push('/auth/signin?registered=true');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Hesap Oluştur
-          </h2>
+    <div className="min-h-screen flex">
+      {/* Sol Taraf - Açıklama */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-50 to-indigo-100 p-12 items-center">
+        <div className="max-w-md">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+            VanFleetX'e Hoş Geldiniz!
+          </h1>
+          <div className="space-y-6 text-gray-600">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 text-[#4263eb]">✓</div>
+              <p>%100 Ücretsiz & Komisyonsuz</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 text-[#4263eb]">👥</div>
+              <p>Türkiye'nin önde gelen lojistik firmalarıyla çalışın</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 text-[#4263eb]">📝</div>
+              <p>Yük ve araç ilanlarınızı kolayca yönetin</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 text-[#4263eb]">🏢</div>
+              <p>Tüm Türkiye'de güvenilir lojistik hizmeti</p>
+            </div>
+          </div>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-              {error}
+      </div>
+
+      {/* Sağ Taraf - Form */}
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 bg-white">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center space-x-2 text-[#4263eb]">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+              </svg>
+              <span className="text-xl font-bold">VanFleetX</span>
             </div>
-          )}
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="name" className="sr-only">
-                Ad Soyad
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Ad Soyad"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Şifre
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Şifre"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="companyName" className="sr-only">
-                Şirket Adı
-              </label>
-              <input
-                id="companyName"
-                name="companyName"
-                type="text"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Şirket Adı"
-                value={formData.companyName}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="companyType" className="sr-only">
-                Şirket Tipi
-              </label>
-              <select
-                id="companyType"
-                name="companyType"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                value={formData.companyType}
-                onChange={handleChange}
-              >
-                <option value="LOGISTICS">Lojistik Şirketi</option>
-                <option value="TRANSPORT">Nakliye Şirketi</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="phone" className="sr-only">
-                Telefon
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Telefon"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="address" className="sr-only">
-                Adres
-              </label>
-              <input
-                id="address"
-                name="address"
-                type="text"
-                required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Adres"
-                value={formData.address}
-                onChange={handleChange}
-              />
-            </div>
+            <h3 className="text-xl text-gray-700">Kayıt Ol</h3>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
-            </button>
-          </div>
-        </form>
-        <div className="text-center">
-          <Link
-            href="/auth/signin"
-            className="font-medium text-indigo-600 hover:text-indigo-500"
-          >
-            Zaten hesabınız var mı? Giriş yapın
-          </Link>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <AtSymbolIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="İş E-postası"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Parola"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="companyName"
+                  name="companyName"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Şirket Adı"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <GlobeAltIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="country"
+                  name="country"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Ülke"
+                  value={formData.country}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="acceptTerms"
+                name="acceptTerms"
+                type="checkbox"
+                required
+                className="h-4 w-4 text-[#4263eb] focus:ring-[#4263eb] border-gray-300 rounded"
+                checked={formData.acceptTerms}
+                onChange={handleChange}
+              />
+              <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-600">
+                <Link href="/privacy" className="text-[#4263eb] hover:text-[#364fc7]">
+                  Gizlilik Politikası
+                </Link>
+                'nı okudum ve kabul ediyorum
+              </label>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4263eb] hover:bg-[#364fc7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Kaydediliyor...' : 'Kaydol'}
+              </button>
+            </div>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Zaten hesabınız var mı?{' '}
+            <Link href="/auth/signin" className="text-[#4263eb] hover:text-[#364fc7]">
+              Giriş Yap
+            </Link>
+          </p>
         </div>
       </div>
     </div>

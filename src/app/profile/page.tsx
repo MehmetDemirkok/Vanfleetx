@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -8,16 +8,55 @@ import {
   BuildingOfficeIcon,
   PhoneIcon,
   EnvelopeIcon,
-  TruckIcon,
-  ArchiveBoxIcon,
+  MapPinIcon,
+  GlobeAltIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
+
+interface UserProfile {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState('truck-posts');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<UserProfile>({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    address: '',
+    city: '',
+    country: '',
+  });
 
-  if (status === 'loading') {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/profile');
+        if (!response.ok) throw new Error('Failed to fetch profile');
+        const data = await response.json();
+        setProfile(data);
+        setFormData(data);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    if (session?.user) {
+      fetchProfile();
+    }
+  }, [session]);
+
+  if (status === 'loading' || !profile) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4263eb]"></div>
@@ -30,137 +69,232 @@ export default function ProfilePage() {
     return null;
   }
 
-  const tabs = [
-    {
-      id: 'truck-posts',
-      name: 'Araç İlanlarım',
-      icon: TruckIcon,
-    },
-    {
-      id: 'cargo-posts',
-      name: 'Yük İlanlarım',
-      icon: ArchiveBoxIcon,
-    },
-  ];
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) throw new Error('Failed to update profile');
+      
+      const updatedProfile = await response.json();
+      setProfile(updatedProfile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Profil Bilgileri */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-            <div className="flex items-center justify-center">
-              <div className="h-24 w-24 rounded-full bg-[#4263eb]/10 flex items-center justify-center">
-                <UserIcon className="h-12 w-12 text-[#4263eb]" />
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-6 space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="h-16 w-16 rounded-full bg-[#4263eb]/10 flex items-center justify-center">
+                <UserIcon className="h-8 w-8 text-[#4263eb]" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Profil Bilgileri</h1>
+                <p className="text-sm text-gray-500">Kişisel ve iletişim bilgilerinizi yönetin</p>
               </div>
             </div>
-            
-            <div className="space-y-4">
-              <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {session.user?.name || 'İsimsiz Kullanıcı'}
-                </h2>
-                <p className="text-sm text-gray-500">VanFleetX Üyesi</p>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 space-y-4">
-                <div className="flex items-center space-x-3 text-gray-600">
-                  <BuildingOfficeIcon className="h-5 w-5" />
-                  <span className="text-sm">ABC Lojistik Ltd. Şti.</span>
-                </div>
-                <div className="flex items-center space-x-3 text-gray-600">
-                  <PhoneIcon className="h-5 w-5" />
-                  <span className="text-sm">+90 (555) 123 45 67</span>
-                </div>
-                <div className="flex items-center space-x-3 text-gray-600">
-                  <EnvelopeIcon className="h-5 w-5" />
-                  <span className="text-sm">{session.user?.email}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => router.push('/profile/edit')}
-                className="w-full px-4 py-2 text-sm font-medium text-[#4263eb] bg-[#4263eb]/5 rounded-md hover:bg-[#4263eb]/10 transition-colors duration-200"
-              >
-                Profili Düzenle
-              </button>
-            </div>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-[#4263eb] bg-[#4263eb]/5 rounded-md hover:bg-[#4263eb]/10 transition-colors duration-200"
+            >
+              <PencilIcon className="h-4 w-4" />
+              <span>{isEditing ? 'Vazgeç' : 'Düzenle'}</span>
+            </button>
           </div>
-        </div>
 
-        {/* İlanlar */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-lg shadow-sm">
-            {/* Tabs */}
-            <div className="border-b border-gray-100">
-              <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-2 py-4 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                        activeTab === tab.id
-                          ? 'border-[#4263eb] text-[#4263eb]'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{tab.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
+          {isEditing ? (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Ad Soyad
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
 
-            {/* İlan Listesi */}
-            <div className="p-6">
-              {activeTab === 'truck-posts' ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Araç İlanlarım</h3>
-                    <button
-                      onClick={() => router.push('/truck-posts/new')}
-                      className="px-4 py-2 text-sm font-medium text-white bg-[#4263eb] rounded-md hover:bg-[#364fc7] transition-colors duration-200"
-                    >
-                      Yeni İlan Ekle
-                    </button>
-                  </div>
-                  
-                  {/* İlan yok mesajı */}
-                  <div className="text-center py-12">
-                    <TruckIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz ilan yok</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Yeni bir araç ilanı oluşturarak başlayın.
-                    </p>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    E-posta
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+                    Firma Adı
+                  </label>
+                  <input
+                    type="text"
+                    id="company"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                    Adres
+                  </label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                    Şehir
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+                    Ülke
+                  </label>
+                  <input
+                    type="text"
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#4263eb] focus:ring-[#4263eb] sm:text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#4263eb] rounded-md hover:bg-[#364fc7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
+                >
+                  Kaydet
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-3">
+                  <UserIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Ad Soyad</p>
+                    <p className="text-sm text-gray-900">{profile.name}</p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Yük İlanlarım</h3>
-                    <button
-                      onClick={() => router.push('/cargo-posts/new')}
-                      className="px-4 py-2 text-sm font-medium text-white bg-[#4263eb] rounded-md hover:bg-[#364fc7] transition-colors duration-200"
-                    >
-                      Yeni İlan Ekle
-                    </button>
-                  </div>
-                  
-                  {/* İlan yok mesajı */}
-                  <div className="text-center py-12">
-                    <ArchiveBoxIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz ilan yok</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Yeni bir yük ilanı oluşturarak başlayın.
-                    </p>
+
+                <div className="flex items-center space-x-3">
+                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">E-posta</p>
+                    <p className="text-sm text-gray-900">{profile.email}</p>
                   </div>
                 </div>
-              )}
+
+                <div className="flex items-center space-x-3">
+                  <PhoneIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Telefon</p>
+                    <p className="text-sm text-gray-900">{profile.phone || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Firma</p>
+                    <p className="text-sm text-gray-900">{profile.company || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 md:col-span-2">
+                  <MapPinIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Adres</p>
+                    <p className="text-sm text-gray-900">{profile.address || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <MapPinIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Şehir</p>
+                    <p className="text-sm text-gray-900">{profile.city || '-'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <GlobeAltIcon className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Ülke</p>
+                    <p className="text-sm text-gray-900">{profile.country || '-'}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

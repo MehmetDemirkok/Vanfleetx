@@ -1,8 +1,12 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, MapPinIcon, TruckIcon, InfoIcon, PhoneIcon } from "lucide-react";
 import Link from "next/link";
-import { SearchFilters } from "@/components/cargo-posts/search-filters";
+import { useSearchParams } from 'next/navigation';
+import { SearchFilters } from "@/components/shared/search-filters";
 import {
   Table,
   TableBody,
@@ -42,26 +46,66 @@ interface CargoPost {
   price?: number;
 }
 
-async function getCargoPostsData() {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/cargo-posts`, {
-      cache: 'no-store'
-    });
-    
-    if (!res.ok) {
-      throw new Error('Failed to fetch cargo posts');
-    }
+export default function CargoPostsPage() {
+  const [posts, setPosts] = useState<CargoPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
 
-    return res.json() as Promise<CargoPost[]>;
-  } catch (error) {
-    console.error('Error fetching cargo posts:', error);
-    return [] as CargoPost[];
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const res = await fetch(`${baseUrl}/api/cargo-posts${searchParams ? `?${searchParams.toString()}` : ''}`);
+        
+        if (!res.ok) {
+          throw new Error('Failed to fetch cargo posts');
+        }
+
+        const data = await res.json();
+        setPosts(data);
+      } catch (error) {
+        console.error('Error fetching cargo posts:', error);
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [searchParams]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Yük İlanları</h1>
+          <Button asChild>
+            <Link href="/cargo-posts/new">Yeni İlan Ekle</Link>
+          </Button>
+        </div>
+        <SearchFilters 
+          baseUrl="/cargo-posts"
+          vehicleTypes={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'tir', label: 'Tır' },
+            { value: 'kamyon', label: 'Kamyon' },
+            { value: 'kamyonet', label: 'Kamyonet' }
+          ]}
+          statusOptions={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'active', label: 'Aktif' },
+            { value: 'inactive', label: 'Pasif' },
+            { value: 'completed', label: 'Tamamlandı' }
+          ]}
+          searchPlaceholder="Konum ara..."
+        />
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4263eb] mx-auto"></div>
+        </div>
+      </div>
+    );
   }
-}
-
-export default async function CargoPostsPage() {
-  const posts = await getCargoPostsData();
 
   if (!posts || posts.length === 0) {
     return (
@@ -72,7 +116,22 @@ export default async function CargoPostsPage() {
             <Link href="/cargo-posts/new">Yeni İlan Ekle</Link>
           </Button>
         </div>
-        <SearchFilters />
+        <SearchFilters 
+          baseUrl="/cargo-posts"
+          vehicleTypes={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'tir', label: 'Tır' },
+            { value: 'kamyon', label: 'Kamyon' },
+            { value: 'kamyonet', label: 'Kamyonet' }
+          ]}
+          statusOptions={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'active', label: 'Aktif' },
+            { value: 'inactive', label: 'Pasif' },
+            { value: 'completed', label: 'Tamamlandı' }
+          ]}
+          searchPlaceholder="Konum ara..."
+        />
         <div className="text-center text-muted-foreground">
           Henüz ilan bulunmamaktadır.
         </div>
@@ -89,7 +148,22 @@ export default async function CargoPostsPage() {
         </Button>
       </div>
 
-      <SearchFilters />
+      <SearchFilters 
+        baseUrl="/cargo-posts"
+        vehicleTypes={[
+          { value: 'all', label: 'Tümü' },
+          { value: 'tir', label: 'Tır' },
+          { value: 'kamyon', label: 'Kamyon' },
+          { value: 'kamyonet', label: 'Kamyonet' }
+        ]}
+        statusOptions={[
+          { value: 'all', label: 'Tümü' },
+          { value: 'active', label: 'Aktif' },
+          { value: 'inactive', label: 'Pasif' },
+          { value: 'completed', label: 'Tamamlandı' }
+        ]}
+        searchPlaceholder="Konum ara..."
+      />
 
       <div className="rounded-md border mt-6">
         <TooltipProvider>
@@ -140,7 +214,7 @@ export default async function CargoPostsPage() {
                   <TableCell>
                     <Tooltip>
                       <TooltipTrigger>
-                        <CalendarIcon className="w-4 h-4 text-blue-600" />
+                        <CalendarIcon className="w-4 h-4 text-[#4263eb]" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Yükleme: {new Date(post.loadingDate).toLocaleDateString("tr-TR")}</p>
@@ -151,7 +225,10 @@ export default async function CargoPostsPage() {
                   <TableCell>
                     <Tooltip>
                       <TooltipTrigger>
-                        <TruckIcon className="w-4 h-4 text-gray-600" />
+                        <div className="flex items-center gap-2">
+                          <TruckIcon className="w-4 h-4 text-gray-600" />
+                          <span>{post.vehicleType}</span>
+                        </div>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>{post.vehicleType}</p>
@@ -160,7 +237,7 @@ export default async function CargoPostsPage() {
                   </TableCell>
                   <TableCell>
                     <Badge 
-                      variant={post.status === "active" ? "success" : "destructive"}
+                      variant={post.status === "active" ? "success" : post.status === "completed" ? "default" : "secondary"}
                       className="w-2 h-2 rounded-full p-0"
                     />
                   </TableCell>
@@ -178,18 +255,20 @@ export default async function CargoPostsPage() {
                       </TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/messages/${post.createdBy._id}`}>
-                            <PhoneIcon className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>İletişime Geç</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    {post.createdBy && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/messages/${post.createdBy._id}`}>
+                              <PhoneIcon className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>İletişime Geç</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

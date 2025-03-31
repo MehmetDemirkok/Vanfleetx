@@ -6,10 +6,10 @@ if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env');
 }
 
-let cached = global.mongoose;
+let cached = (global as any).mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 export async function connectToDatabase() {
@@ -21,6 +21,10 @@ export async function connectToDatabase() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: true,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4
     };
 
     console.log('Creating new MongoDB connection');

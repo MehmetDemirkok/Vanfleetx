@@ -1,17 +1,27 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbConnect';
-import User from '@/models/User';
+import { connectToDatabase } from '@/lib/db';
+import { User } from '@/lib/models/user.model';
 
 export async function POST(req: Request) {
   try {
-    await dbConnect();
+    await connectToDatabase();
 
-    const { email, password, name } = await req.json();
+    const { 
+      email, 
+      password, 
+      name,
+      companyName,
+      companyType,
+      phone,
+      address,
+      city,
+      country
+    } = await req.json();
 
     // Validasyon kontrolleri
     if (!email || !password || !name) {
       return NextResponse.json(
-        { error: 'Tüm alanlar zorunludur' },
+        { error: 'Email, şifre ve ad alanları zorunludur' },
         { status: 400 }
       );
     }
@@ -47,7 +57,13 @@ export async function POST(req: Request) {
       email: email.toLowerCase(),
       password,
       name,
+      company: companyName,
+      phone,
+      address,
+      city,
+      country,
       role: 'user',
+      companyType,
     });
 
     // Şifreyi çıkart ve kullanıcı bilgilerini döndür
@@ -55,7 +71,13 @@ export async function POST(req: Request) {
       id: user._id.toString(),
       email: user.email,
       name: user.name,
+      company: user.company,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      country: user.country,
       role: user.role,
+      companyType: user.companyType,
     };
 
     return NextResponse.json(userResponse);

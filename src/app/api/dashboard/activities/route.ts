@@ -1,9 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import dbConnect from '@/lib/dbConnect';
-import CargoPost from '@/models/CargoPost';
-import TruckPost from '@/models/TruckPost';
+import { connectToDatabase } from '@/lib/db';
+import { CargoPost } from '@/lib/models/cargo-post.model';
+import { TruckPost } from '@/lib/models/truck-post.model';
+import { Document, Types } from 'mongoose';
+
+interface BaseDocument extends Document {
+  _id: Types.ObjectId;
+  status: string;
+  createdAt: Date;
+}
+
+interface CargoPostDocument extends BaseDocument {
+  loadingCity: string;
+  unloadingCity: string;
+}
+
+interface TruckPostDocument extends BaseDocument {
+  title: string;
+  currentLocation: string;
+  destination: string;
+}
 
 export async function GET() {
   try {
@@ -16,40 +34,40 @@ export async function GET() {
       );
     }
 
-    await dbConnect();
+    await connectToDatabase();
 
     // Son 5 yük ilanı
-    const recentCargoPosts = await CargoPost.find({
-      userId: session.user.id
+    const recentCargoPosts = (await CargoPost.find({
+      createdBy: session.user.id
     })
     .sort({ createdAt: -1 })
     .limit(5)
-    .select('title status createdAt');
+    .select('loadingCity unloadingCity status createdAt')
+    .lean()) as unknown as CargoPostDocument[];
 
     // Son 5 araç ilanı
-    const recentTruckPosts = await TruckPost.find({
-      userId: session.user.id
+    const recentTruckPosts = (await TruckPost.find({
+      createdBy: session.user.id
     })
     .sort({ createdAt: -1 })
     .limit(5)
-    .select('title status createdAt');
+    .select('title currentLocation destination status createdAt')
+    .lean()) as unknown as TruckPostDocument[];
 
     // Tüm ilanları birleştir ve tarihe göre sırala
     const allPosts = [
       ...recentCargoPosts.map(post => ({
-        id: post._id,
-        title: post.title,
-        type: post.status === 'completed' ? 'Tamamlandı' : 
-              post.status === 'active' ? 'Devam Ediyor' : 'Beklemede',
+        id: post._id.toString(),
+        title: `${post.loadingCity} - ${post.unloadingCity}`,
+        type: 'Yük İlanı',
         date: new Date(post.createdAt).toLocaleDateString('tr-TR'),
         status: post.status === 'completed' ? 'success' :
                 post.status === 'active' ? 'ongoing' : 'pending'
       })),
       ...recentTruckPosts.map(post => ({
-        id: post._id,
-        title: post.title,
-        type: post.status === 'completed' ? 'Tamamlandı' : 
-              post.status === 'active' ? 'Devam Ediyor' : 'Beklemede',
+        id: post._id.toString(),
+        title: `${post.currentLocation} - ${post.destination}`,
+        type: 'Araç İlanı',
         date: new Date(post.createdAt).toLocaleDateString('tr-TR'),
         status: post.status === 'completed' ? 'success' :
                 post.status === 'active' ? 'ongoing' : 'pending'

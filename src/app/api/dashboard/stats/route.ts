@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import dbConnect from '@/lib/dbConnect';
-import CargoPost from '@/models/CargoPost';
-import TruckPost from '@/models/TruckPost';
+import { connectToDatabase } from '@/lib/db';
+import { CargoPost } from '@/lib/models/cargo-post.model';
+import { TruckPost } from '@/lib/models/truck-post.model';
 
 export async function GET() {
   try {
@@ -16,27 +16,27 @@ export async function GET() {
       );
     }
 
-    await dbConnect();
+    await connectToDatabase();
 
     // Kullanıcının aktif ilanlarını say
     const activeCargoPosts = await CargoPost.countDocuments({
-      userId: session.user.id,
+      createdBy: session.user.id,
       status: 'active'
     });
 
     const activeTruckPosts = await TruckPost.countDocuments({
-      userId: session.user.id,
+      createdBy: session.user.id,
       status: 'active'
     });
 
     // Toplam taşıma sayısı (tamamlanmış ilanlar)
     const completedCargoPosts = await CargoPost.countDocuments({
-      userId: session.user.id,
+      createdBy: session.user.id,
       status: 'completed'
     });
 
     const completedTruckPosts = await TruckPost.countDocuments({
-      userId: session.user.id,
+      createdBy: session.user.id,
       status: 'completed'
     });
 
