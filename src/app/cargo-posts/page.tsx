@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { MapPinIcon, TruckIcon, CalendarIcon, PhoneIcon, InformationCircleIcon, ArrowPathIcon, ArrowLongRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { Modal } from '@/components/ui/Modal';
+import { SearchFilters } from "@/components/shared/search-filters";
 
 interface CargoPost {
   _id: string;
@@ -30,6 +31,7 @@ interface CargoPost {
 
 export default function CargoPostsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [posts, setPosts] = useState<CargoPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,12 +41,13 @@ export default function CargoPostsPage() {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [searchParams]);
 
   const fetchPosts = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/cargo-posts');
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/cargo-posts${searchParams ? `?${searchParams.toString()}` : ''}`);
       const data = await response.json();
       setPosts(data);
     } catch (error) {
@@ -135,22 +138,43 @@ export default function CargoPostsPage() {
         {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold text-gray-900">Yük İlanları</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={fetchPosts}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
             >
               <ArrowPathIcon className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Yenile
             </button>
             <Link
               href="/cargo-posts/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4263eb] hover:bg-[#364fc7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4263eb] hover:bg-[#364fc7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
             >
               Yeni İlan
             </Link>
           </div>
         </div>
+
+        {/* Search Filters */}
+        <SearchFilters 
+          baseUrl="/cargo-posts"
+          vehicleTypes={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'palet', label: 'Palet' },
+            { value: 'koli', label: 'Koli' },
+            { value: 'konteyner', label: 'Konteyner' },
+            { value: 'dökme', label: 'Dökme Yük' },
+            { value: 'parsiyel', label: 'Parsiyel' }
+          ]}
+          statusOptions={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'active', label: 'Aktif' },
+            { value: 'pending', label: 'Beklemede' },
+            { value: 'completed', label: 'Tamamlandı' },
+            { value: 'cancelled', label: 'İptal Edildi' }
+          ]}
+          searchPlaceholder="Konum ara..."
+        />
 
         {/* Table */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
