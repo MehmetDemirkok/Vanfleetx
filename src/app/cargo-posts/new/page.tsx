@@ -30,23 +30,71 @@ const romanianCities = [
   'Brăila', 'Arad', 'Piteşti', 'Sibiu', 'Bacău', 'Târgu Mureş', 'Baia Mare', 'Buzău', 'Botoşani', 'Satu Mare'
 ];
 
+// Ülkeler listesi
+const countries = [
+  { code: 'TR', name: 'Türkiye' },
+  { code: 'DE', name: 'Almanya' },
+  { code: 'FR', name: 'Fransa' },
+  { code: 'IT', name: 'İtalya' },
+  { code: 'GB', name: 'İngiltere' },
+  { code: 'ES', name: 'İspanya' },
+  { code: 'NL', name: 'Hollanda' },
+  { code: 'BE', name: 'Belçika' },
+  { code: 'PL', name: 'Polonya' },
+  { code: 'CZ', name: 'Çek Cumhuriyeti' },
+  { code: 'PT', name: 'Portekiz' },
+  { code: 'SE', name: 'İsveç' },
+  { code: 'AT', name: 'Avusturya' },
+  { code: 'CH', name: 'İsviçre' },
+  { code: 'GR', name: 'Yunanistan' },
+  { code: 'HU', name: 'Macaristan' },
+  { code: 'DK', name: 'Danimarka' },
+  { code: 'FI', name: 'Finlandiya' },
+  { code: 'SK', name: 'Slovakya' },
+  { code: 'NO', name: 'Norveç' },
+  { code: 'IE', name: 'İrlanda' },
+  { code: 'HR', name: 'Hırvatistan' },
+  { code: 'BG', name: 'Bulgaristan' },
+  { code: 'RO', name: 'Romanya' },
+  { code: 'RS', name: 'Sırbistan' },
+  { code: 'SI', name: 'Slovenya' },
+  { code: 'EE', name: 'Estonya' },
+  { code: 'LV', name: 'Letonya' },
+  { code: 'LT', name: 'Litvanya' },
+  { code: 'LU', name: 'Lüksemburg' },
+  { code: 'MT', name: 'Malta' },
+  { code: 'CY', name: 'Kıbrıs' },
+  { code: 'IS', name: 'İzlanda' },
+  { code: 'AL', name: 'Arnavutluk' },
+  { code: 'BA', name: 'Bosna Hersek' },
+  { code: 'ME', name: 'Karadağ' },
+  { code: 'MK', name: 'Kuzey Makedonya' },
+  { code: 'MD', name: 'Moldova' },
+  { code: 'UA', name: 'Ukrayna' },
+  { code: 'BY', name: 'Belarus' }
+];
+
 interface FormData {
   title: string;
   loadingCountry: string;
   loadingCity: string;
   loadingAddress: string;
-  deliveryCountry: string;
-  deliveryCity: string;
+  unloadingCountry: string;
+  unloadingCity: string;
   unloadingAddress: string;
   cargoType: string;
   weight: string;
   volume: string;
   price: string;
   loadingDate: string;
-  unloadingDate: string;
+  loadingTime: string;
   description: string;
   palletCount?: string;
   palletType?: string;
+}
+
+interface SubmissionData extends Omit<FormData, 'loadingTime'> {
+  loadingTime?: string;
 }
 
 export default function NewCargoPost() {
@@ -55,30 +103,30 @@ export default function NewCargoPost() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     title: '',
-    loadingCountry: 'Türkiye',
+    loadingCountry: 'TR',
     loadingCity: '',
     loadingAddress: '',
-    deliveryCountry: 'Türkiye',
-    deliveryCity: '',
+    unloadingCountry: 'TR',
+    unloadingCity: '',
     unloadingAddress: '',
     cargoType: '',
     weight: '',
     volume: '',
     price: '',
     loadingDate: '',
-    unloadingDate: '',
+    loadingTime: '',
     description: '',
     palletCount: '',
     palletType: ''
   });
 
-  const getCitiesByCountry = (country: string) => {
-    switch (country) {
-      case 'Türkiye':
+  const getCitiesByCountry = (countryCode: string) => {
+    switch (countryCode) {
+      case 'TR':
         return turkiyeCities;
-      case 'Bulgaristan':
+      case 'BG':
         return bulgarianCities;
-      case 'Romanya':
+      case 'RO':
         return romanianCities;
       default:
         return [];
@@ -93,8 +141,8 @@ export default function NewCargoPost() {
       // Ülke değiştiğinde şehri sıfırla
       if (name === 'loadingCountry') {
         newData.loadingCity = '';
-      } else if (name === 'deliveryCountry') {
-        newData.deliveryCity = '';
+      } else if (name === 'unloadingCountry') {
+        newData.unloadingCity = '';
       }
       
       return newData;
@@ -110,12 +158,24 @@ export default function NewCargoPost() {
 
     try {
       setIsSubmitting(true);
+      
+      // Combine date and time fields
+      const submissionData: SubmissionData = {
+        ...formData,
+        loadingDate: formData.loadingDate && formData.loadingTime 
+          ? `${formData.loadingDate}T${formData.loadingTime}` 
+          : '',
+      };
+      
+      // Remove the separate time fields before submission
+      delete submissionData.loadingTime;
+
       const response = await fetch('/api/cargo-posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       if (response.ok) {
@@ -161,7 +221,7 @@ export default function NewCargoPost() {
             />
           </div>
 
-          {/* Yükleme ve Teslimat Bilgileri */}
+          {/* Lokasyon Bilgileri */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-lg font-medium text-gray-900 mb-6">Lokasyon Bilgileri</h2>
             
@@ -179,28 +239,32 @@ export default function NewCargoPost() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
                     required
                   >
-                    <option value="Türkiye">Türkiye</option>
-                    <option value="Bulgaristan">Bulgaristan</option>
-                    <option value="Romanya">Romanya</option>
-                  </select>
-                  <select
-                    name="loadingCity"
-                    value={formData.loadingCity}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
-                    required
-                  >
-                    <option value="">Şehir Seçin</option>
-                    {getCitiesByCountry(formData.loadingCountry).map(city => (
-                      <option key={city} value={city}>{city}</option>
+                    {countries.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
                     ))}
                   </select>
+                  {formData.loadingCountry === 'TR' && (
+                    <select
+                      name="loadingCity"
+                      value={formData.loadingCity}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                      required
+                    >
+                      <option value="">Şehir Seçin</option>
+                      {turkiyeCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     name="loadingAddress"
                     value={formData.loadingAddress}
                     onChange={handleChange}
-                    placeholder="Yükleme Adresi"
+                    placeholder={formData.loadingCountry === 'TR' ? "Yükleme Adresi" : "Şehir ve Adres Bilgisi"}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
                     required
                   />
@@ -214,34 +278,38 @@ export default function NewCargoPost() {
                 </label>
                 <div className="space-y-3">
                   <select
-                    name="deliveryCountry"
-                    value={formData.deliveryCountry}
+                    name="unloadingCountry"
+                    value={formData.unloadingCountry}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
                     required
                   >
-                    <option value="Türkiye">Türkiye</option>
-                    <option value="Bulgaristan">Bulgaristan</option>
-                    <option value="Romanya">Romanya</option>
-                  </select>
-                  <select
-                    name="deliveryCity"
-                    value={formData.deliveryCity}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
-                    required
-                  >
-                    <option value="">Şehir Seçin</option>
-                    {getCitiesByCountry(formData.deliveryCountry).map(city => (
-                      <option key={city} value={city}>{city}</option>
+                    {countries.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
                     ))}
                   </select>
+                  {formData.unloadingCountry === 'TR' && (
+                    <select
+                      name="unloadingCity"
+                      value={formData.unloadingCity}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                      required
+                    >
+                      <option value="">Şehir Seçin</option>
+                      {turkiyeCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  )}
                   <input
                     type="text"
                     name="unloadingAddress"
                     value={formData.unloadingAddress}
                     onChange={handleChange}
-                    placeholder="Teslimat Adresi"
+                    placeholder={formData.unloadingCountry === 'TR' ? "Teslimat Adresi" : "Şehir ve Adres Bilgisi"}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
                     required
                   />
@@ -358,31 +426,34 @@ export default function NewCargoPost() {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-lg font-medium text-gray-900 mb-6">Tarih Bilgileri</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Yükleme Tarihi
-                </label>
-                <input
-                  type="datetime-local"
-                  name="loadingDate"
-                  value={formData.loadingDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teslimat Tarihi
-                </label>
-                <input
-                  type="datetime-local"
-                  name="unloadingDate"
-                  value={formData.unloadingDate}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
-                  required
-                />
+              {/* Yükleme Tarihi ve Saati */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Yükleme Tarihi
+                  </label>
+                  <input
+                    type="date"
+                    name="loadingDate"
+                    value={formData.loadingDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Yükleme Saati
+                  </label>
+                  <input
+                    type="time"
+                    name="loadingTime"
+                    value={formData.loadingTime}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#4263eb] focus:border-[#4263eb] text-sm"
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
