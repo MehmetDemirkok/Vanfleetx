@@ -29,13 +29,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  InformationCircleIcon, 
+  ArrowPathIcon,
+  ArrowLongRightIcon 
+} from '@heroicons/react/24/outline';
+import { useSession } from 'next-auth/react';
+import { Modal } from '@/components/ui/Modal';
 
 interface TruckPost {
   _id: string;
-  currentCity: string;
-  currentAddress: string;
-  destinationCity: string;
-  destinationAddress: string;
+  currentLocation: string;
+  destination: string;
   availableDate: string;
   truckType: string;
   capacity: number;
@@ -63,28 +68,32 @@ export default function TruckPostsPage() {
   const postsPerPage = 10;
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
+  const [selectedPost, setSelectedPost] = useState<TruckPost | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const res = await fetch(`${baseUrl}/api/truck-posts${searchParams ? `?${searchParams.toString()}` : ''}`, {
         cache: 'no-store'
       });
-      
-      if (!res.ok) {
-        throw new Error('Failed to fetch truck posts');
-      }
+        
+        if (!res.ok) {
+          throw new Error('Failed to fetch truck posts');
+        }
 
-      const data = await res.json();
-      setPosts(data);
-    } catch (error) {
-      console.error('Error fetching truck posts:', error);
-      setPosts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const data = await res.json();
+        setPosts(data);
+      } catch (error) {
+        console.error('Error fetching truck posts:', error);
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     fetchPosts();
@@ -114,8 +123,8 @@ export default function TruckPostsPage() {
         : new Date(b.availableDate).getTime() - new Date(a.availableDate).getTime();
     }
     if (sortField === 'route') {
-      const routeA = `${a.currentCity}-${a.destinationCity}`;
-      const routeB = `${b.currentCity}-${b.destinationCity}`;
+      const routeA = `${a.currentLocation}-${a.destination}`;
+      const routeB = `${b.currentLocation}-${b.destination}`;
       return sortOrder === 'asc' 
         ? routeA.localeCompare(routeB)
         : routeB.localeCompare(routeA);
@@ -136,20 +145,24 @@ export default function TruckPostsPage() {
 
   const formatDate = (dateString: string): string => {
     try {
+      if (!dateString) {
+        return 'Tarih Belirtilmemiş';
+      }
+
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return 'Geçersiz Tarih';
+        console.error('Invalid date string:', dateString);
+        return 'Tarih Formatı Hatalı';
       }
+
       return new Intl.DateTimeFormat('tr-TR', {
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date).toString();
+        day: '2-digit'
+      }).format(date);
     } catch (error) {
       console.error('Date formatting error:', error);
-      return 'Geçersiz Tarih';
+      return 'Tarih Formatı Hatalı';
     }
   };
 
@@ -177,32 +190,52 @@ export default function TruckPostsPage() {
     return statusMap[status];
   };
 
+  const handleDetailClick = (post: TruckPost) => {
+    if (!session) {
+      alert('Bu bilgileri görüntülemek için giriş yapmalısınız.');
+      router.push('/auth/signin');
+      return;
+    }
+    setSelectedPost(post);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleContactClick = (post: TruckPost) => {
+    if (!session) {
+      alert('İletişim bilgilerini görüntülemek için giriş yapmalısınız.');
+      router.push('/auth/signin');
+      return;
+    }
+    setSelectedPost(post);
+    setIsContactModalOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold text-gray-900">Araç İlanları</h1>
-            <Button asChild>
-              <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
-            </Button>
-          </div>
-          <SearchFilters 
-            baseUrl="/truck-posts"
-            vehicleTypes={[
-              { value: 'all', label: 'Tümü' },
-              { value: 'tir', label: 'Tır' },
-              { value: 'kamyon', label: 'Kamyon' },
-              { value: 'kamyonet', label: 'Kamyonet' }
-            ]}
-            statusOptions={[
-              { value: 'all', label: 'Tümü' },
-              { value: 'active', label: 'Aktif' },
-              { value: 'inactive', label: 'Pasif' },
-              { value: 'completed', label: 'Tamamlandı' }
-            ]}
-            searchPlaceholder="Konum ara..."
-          />
+          <Button asChild>
+            <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
+          </Button>
+        </div>
+        <SearchFilters 
+          baseUrl="/truck-posts"
+          vehicleTypes={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'tir', label: 'Tır' },
+            { value: 'kamyon', label: 'Kamyon' },
+            { value: 'kamyonet', label: 'Kamyonet' }
+          ]}
+          statusOptions={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'active', label: 'Aktif' },
+            { value: 'inactive', label: 'Pasif' },
+            { value: 'completed', label: 'Tamamlandı' }
+          ]}
+          searchPlaceholder="Konum ara..."
+        />
           <div className="mt-8">
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -227,26 +260,26 @@ export default function TruckPostsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold text-gray-900">Araç İlanları</h1>
-            <Button asChild>
-              <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
-            </Button>
-          </div>
-          <SearchFilters 
-            baseUrl="/truck-posts"
-            vehicleTypes={[
-              { value: 'all', label: 'Tümü' },
-              { value: 'tir', label: 'Tır' },
-              { value: 'kamyon', label: 'Kamyon' },
-              { value: 'kamyonet', label: 'Kamyonet' }
-            ]}
-            statusOptions={[
-              { value: 'all', label: 'Tümü' },
-              { value: 'active', label: 'Aktif' },
-              { value: 'inactive', label: 'Pasif' },
-              { value: 'completed', label: 'Tamamlandı' }
-            ]}
-            searchPlaceholder="Konum ara..."
-          />
+          <Button asChild>
+            <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
+          </Button>
+        </div>
+        <SearchFilters 
+          baseUrl="/truck-posts"
+          vehicleTypes={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'tir', label: 'Tır' },
+            { value: 'kamyon', label: 'Kamyon' },
+            { value: 'kamyonet', label: 'Kamyonet' }
+          ]}
+          statusOptions={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'active', label: 'Aktif' },
+            { value: 'inactive', label: 'Pasif' },
+            { value: 'completed', label: 'Tamamlandı' }
+          ]}
+          searchPlaceholder="Konum ara..."
+        />
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <TruckIcon className="w-16 h-16 text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold mb-2">Henüz İlan Bulunmuyor</h3>
@@ -268,45 +301,42 @@ export default function TruckPostsPage() {
         <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold text-gray-900">Araç İlanları</h1>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
+            <button
               onClick={handleRefresh}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
             >
-              <RefreshCwIcon className="w-4 h-4" />
+              <ArrowPathIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Yenile
-            </Button>
-            <Button
-              size="sm"
-              className="bg-[#4263eb] hover:bg-[#364fc7] text-white px-3 py-2 text-sm font-medium"
-              asChild
+            </button>
+            <Link
+              href="/truck-posts/new"
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4263eb] hover:bg-[#364fc7] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4263eb]"
             >
-              <Link href="/truck-posts/new">Yeni İlan</Link>
-            </Button>
+              Yeni İlan
+            </Link>
           </div>
-        </div>
+      </div>
 
-        <SearchFilters 
-          baseUrl="/truck-posts"
-          vehicleTypes={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'tir', label: 'Tır' },
-            { value: 'kamyon', label: 'Kamyon' },
-            { value: 'kamyonet', label: 'Kamyonet' }
-          ]}
-          statusOptions={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'active', label: 'Aktif' },
-            { value: 'inactive', label: 'Pasif' },
-            { value: 'completed', label: 'Tamamlandı' }
-          ]}
-          searchPlaceholder="Konum ara..."
-        />
+      <SearchFilters 
+        baseUrl="/truck-posts"
+        vehicleTypes={[
+          { value: 'all', label: 'Tümü' },
+          { value: 'tir', label: 'Tır' },
+          { value: 'kamyon', label: 'Kamyon' },
+          { value: 'kamyonet', label: 'Kamyonet' }
+        ]}
+        statusOptions={[
+          { value: 'all', label: 'Tümü' },
+          { value: 'active', label: 'Aktif' },
+          { value: 'inactive', label: 'Pasif' },
+          { value: 'completed', label: 'Tamamlandı' }
+        ]}
+        searchPlaceholder="Konum ara..."
+      />
 
         <div className="bg-white shadow-sm rounded-lg overflow-hidden mt-6">
           <div className="overflow-x-auto">
-            <TooltipProvider>
+        <TooltipProvider>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -337,9 +367,9 @@ export default function TruckPostsPage() {
                       <tr key={post._id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-900">{post.currentCity}</span>
-                            <ArrowRight className="h-4 w-4 text-gray-400" />
-                            <span className="text-xs font-medium text-gray-900">{post.destinationCity}</span>
+                            <span className="text-xs font-medium text-gray-900">{post.currentLocation}</span>
+                            <ArrowLongRightIcon className="h-4 w-4 text-gray-400" />
+                            <span className="text-xs font-medium text-gray-900">{post.destination}</span>
                           </div>
                         </td>
                         <td className="px-4 py-2">
@@ -349,7 +379,7 @@ export default function TruckPostsPage() {
                                 <span className="text-[10px] text-green-800">M</span>
                               </div>
                               <div className="ml-1.5">
-                                <div className="text-xs text-gray-900">{post.currentAddress}</div>
+                                <div className="text-xs text-gray-900">{post.currentLocation}</div>
                               </div>
                             </div>
                             <div className="flex items-center">
@@ -357,7 +387,7 @@ export default function TruckPostsPage() {
                                 <span className="text-[10px] text-red-800">H</span>
                               </div>
                               <div className="ml-1.5">
-                                <div className="text-xs text-gray-900">{post.destinationAddress}</div>
+                                <div className="text-xs text-gray-900">{post.destination}</div>
                               </div>
                             </div>
                           </div>
@@ -374,8 +404,8 @@ export default function TruckPostsPage() {
                             <div>
                               <div className="text-xs text-gray-900">{post.truckType}</div>
                               <div className="text-[10px] text-gray-500">{post.capacity} ton</div>
-                            </div>
-                          </div>
+                    </div>
+                        </div>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusInfo.bgColor} ${statusInfo.textColor}`}>
@@ -385,33 +415,35 @@ export default function TruckPostsPage() {
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" asChild>
-                                  <Link href={`/truck-posts/${post._id}`}>
-                                    <InfoIcon className="w-4 h-4" />
-                                  </Link>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Detayları Gör</p>
-                              </TooltipContent>
-                            </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleDetailClick(post)}
+                          className="text-gray-400 hover:text-[#4263eb] p-1 rounded-md hover:bg-blue-50/50 transition-colors"
+                        >
+                          <InformationCircleIcon className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="bg-[#4263eb]/90 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-md border border-blue-400/20">
+                        İlan Detayları
+                      </TooltipContent>
+                    </Tooltip>
 
-                            {post.createdBy && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" asChild>
-                                    <Link href={`/messages/${post.createdBy._id}`}>
-                                      <PhoneIcon className="w-4 h-4" />
-                                    </Link>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>İletişime Geç</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                    {post.createdBy && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleContactClick(post)}
+                            className="text-gray-400 hover:text-[#4263eb] p-1 rounded-md hover:bg-blue-50/50 transition-colors"
+                          >
+                            <PhoneIcon className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="bg-[#4263eb]/90 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-md border border-blue-400/20">
+                          İletişime Geç
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                           </div>
                         </td>
                       </tr>
@@ -456,6 +488,88 @@ export default function TruckPostsPage() {
           </div>
         )}
       </div>
+
+      {/* Detail Modal */}
+      <Modal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        title="İlan Detayları"
+      >
+        {selectedPost && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Araç Bilgileri</h4>
+                <p className="mt-1 text-sm text-gray-900">
+                  {selectedPost.truckType}
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                  {selectedPost.capacity} ton
+                </p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Fiyat</h4>
+                <p className="mt-1 text-sm text-gray-900">
+                  {selectedPost.price} ₺
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Yükleme Bilgileri</h4>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.loadingCity}</p>
+              <p className="mt-1 text-sm text-gray-600">{selectedPost.loadingAddress}</p>
+              <p className="mt-1 text-sm text-gray-600">{formatDate(selectedPost.availableDate)}</p>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Teslimat Bilgileri</h4>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.unloadingCity}</p>
+              <p className="mt-1 text-sm text-gray-600">{selectedPost.unloadingAddress}</p>
+            </div>
+
+            {selectedPost.description && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Açıklama</h4>
+                <p className="mt-1 text-sm text-gray-600">{selectedPost.description}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Contact Modal */}
+      <Modal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        title="İletişim Bilgileri"
+      >
+        {selectedPost && (
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">İlan Sahibi</h4>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.name}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">E-posta</h4>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.email}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500">Telefon</h4>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.phone || 'Belirtilmemiş'}</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsContactModalOpen(false)}
+                className="px-4 py-2 bg-[#4263eb] text-white rounded-md hover:bg-[#364fc7] text-sm font-medium"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 } 

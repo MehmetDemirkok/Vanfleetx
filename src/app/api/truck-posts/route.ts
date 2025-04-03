@@ -50,6 +50,7 @@ export async function GET(request: Request) {
     const formattedPosts = posts.map(post => ({
       ...post,
       _id: post._id.toString(),
+      availableDate: post.availableDate ? new Date(post.availableDate).toISOString() : new Date().toISOString(),
       createdAt: post.createdAt?.toISOString(),
       updatedAt: post.updatedAt?.toISOString(),
       createdBy: post.createdBy ? {
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error fetching truck posts:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
       destination: data.destination,
       truckType: data.truckType,
       capacity: parseFloat(data.capacity),
+      availableDate: new Date(data.availableDate),
       status: 'active',
       createdBy: session.user.id
     };

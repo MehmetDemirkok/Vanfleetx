@@ -6,6 +6,7 @@ export interface ITruckPost extends Document {
   destination: string;
   truckType: string;
   capacity: number;
+  availableDate: Date;
   status: 'active' | 'pending' | 'completed';
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -18,6 +19,7 @@ const truckPostSchema = new Schema<ITruckPost>({
   destination: { type: String, required: true },
   truckType: { type: String, required: true },
   capacity: { type: Number, required: true },
+  availableDate: { type: Date, required: true },
   status: { 
     type: String, 
     enum: ['active', 'pending', 'completed'],
