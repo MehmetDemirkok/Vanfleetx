@@ -29,6 +29,26 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Şirket adı zorunludur'],
     trim: true
   },
+  companyType: {
+    type: String,
+    required: [true, 'Şirket türü zorunludur'],
+    trim: true
+  },
+  phone: {
+    type: String,
+    required: [true, 'Telefon numarası zorunludur'],
+    trim: true
+  },
+  address: {
+    type: String,
+    required: [true, 'Adres zorunludur'],
+    trim: true
+  },
+  city: {
+    type: String,
+    required: [true, 'Şehir zorunludur'],
+    trim: true
+  },
   country: {
     type: String,
     required: [true, 'Ülke zorunludur'],
