@@ -15,7 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { db } = await connectToDatabase();
+    await connectToDatabase();
     
     const activities = await Activity.find()
       .sort({ timestamp: -1 })

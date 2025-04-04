@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/db';
 import { CargoPost } from '@/lib/models/cargo-post.model';
 import { TruckPost } from '@/lib/models/truck-post.model';
