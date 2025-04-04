@@ -10,8 +10,48 @@ import { UserActivityTracker } from '@/components/user-activity-tracker';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Lojistik Platform',
+  title: {
+    default: 'VanFleetX | Lojistik Platform',
+    template: '%s | VanFleetX'
+  },
   description: 'Yük ve kamyon ilanları için lojistik platformu',
+  icons: {
+    icon: [
+      {
+        url: '/favicon.ico',
+        sizes: 'any',
+      },
+      {
+        url: '/icon.png',
+        type: 'image/png',
+        sizes: '32x32',
+      }
+    ],
+    apple: {
+      url: '/apple-icon.png',
+      type: 'image/png',
+      sizes: '180x180',
+    },
+  },
+  manifest: '/site.webmanifest',
+  applicationName: 'VanFleetX',
+  keywords: ['lojistik', 'nakliye', 'taşımacılık', 'yük', 'kamyon', 'tır'],
+  authors: [{ name: 'VanFleetX Team' }],
+  creator: 'VanFleetX',
+  publisher: 'VanFleetX',
+  formatDetection: {
+    telephone: true,
+    date: true,
+    address: true,
+    email: true,
+    url: true,
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  themeColor: '#4263eb',
 };
 
 export default function RootLayout({

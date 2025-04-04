@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import { ChevronDownIcon, TruckIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, TruckIcon, Bars3Icon, XMarkIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -135,6 +135,10 @@ export default function Header() {
           <div className="hidden md:flex md:items-center md:space-x-4">
             {session ? (
               <>
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <EnvelopeIcon className="h-4 w-4" />
+                  <span>{session.user?.email}</span>
+                </div>
                 <Link
                   href="/profile"
                   className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors duration-200"
@@ -193,6 +197,14 @@ export default function Header() {
         )}
       >
         <div className="px-2 pt-2 pb-3 space-y-1">
+          {session && (
+            <div className="px-3 py-2 text-sm text-muted-foreground border-b border-border">
+              <div className="flex items-center space-x-2">
+                <EnvelopeIcon className="h-4 w-4" />
+                <span>{session.user?.email}</span>
+              </div>
+            </div>
+          )}
           {navigationItems.map((item) => {
             if (item.requireAuth && !session) return null;
             return (

@@ -378,6 +378,7 @@ function TruckPostsContent() {
                   </button>
                 </TableHead>
                 <TableHead className="w-[150px]">Araç Tipi</TableHead>
+                <TableHead className="w-[100px]">İlan Sahibi</TableHead>
                 <TableHead className="w-[100px]">
                   <button
                     className="flex items-center text-xs font-medium text-gray-500 hover:text-gray-700"
@@ -416,6 +417,11 @@ function TruckPostsContent() {
                           <div className="text-xs text-gray-900">{post.truckType}</div>
                           <div className="text-[10px] text-gray-500">{post.capacity} ton</div>
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="text-xs text-gray-900">{post.createdBy?.name || 'İsim Belirtilmemiş'}</div>
                       </div>
                     </TableCell>
                     <TableCell className="px-4 py-2 whitespace-nowrap">
@@ -484,15 +490,18 @@ function TruckPostsContent() {
         title="İlan Detayları"
       >
         {selectedPost && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Araç Bilgileri</h4>
+                <h4 className="text-sm font-medium text-gray-500">İlan Sahibi</h4>
                 <p className="mt-1 text-sm text-gray-900">
-                  {selectedPost.truckType}
+                  {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
-                  {selectedPost.capacity} ton
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Araç Tipi</h4>
+                <p className="mt-1 text-sm text-gray-900">
+                  {selectedPost.truckType} ({selectedPost.capacity} ton)
                 </p>
               </div>
               <div>
@@ -534,15 +543,21 @@ function TruckPostsContent() {
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-medium text-gray-500">İlan Sahibi</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.name}</p>
+              <p className="mt-1 text-sm text-gray-900">
+                {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
+              </p>
             </div>
             <div>
               <h4 className="text-sm font-medium text-gray-500">E-posta</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.email}</p>
+              <p className="mt-1 text-sm text-gray-900">
+                {selectedPost.createdBy?.email || 'E-posta Belirtilmemiş'}
+              </p>
             </div>
             <div>
               <h4 className="text-sm font-medium text-gray-500">Telefon</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.phone || 'Belirtilmemiş'}</p>
+              <p className="mt-1 text-sm text-gray-900">
+                {selectedPost.createdBy?.phone || 'Telefon Belirtilmemiş'}
+              </p>
             </div>
           </div>
         )}
