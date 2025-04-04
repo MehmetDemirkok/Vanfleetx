@@ -1,51 +1,44 @@
 import { NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db';
+import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/db';
-import { CargoPost } from '@/lib/models/cargo-post.model';
-import { TruckPost } from '@/lib/models/truck-post.model';
-import { Document, Types } from 'mongoose';
 
-// Explicitly set the runtime to Node.js
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-interface BaseDocument extends Document {
-  _id: Types.ObjectId;
-  status: string;
-  createdAt: Date;
-}
-
-interface CargoPostDocument extends BaseDocument {
-  loadingCity: string;
-  unloadingCity: string;
-}
-
-interface TruckPostDocument extends BaseDocument {
-  title: string;
-  currentLocation: string;
-  destination: string;
-}
-
+// Set runtime to Node.js
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectToDatabase();
 
-    // Return empty activities since we removed cargo and vehicle posts
-    return NextResponse.json([]);
+    const User = mongoose.model('User');
+    const currentUser = await User.findById(session.user.id);
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const Activity = mongoose.model('Activity');
+
+    // Kullanıcı rolüne göre filtreleme koşulları
+    const userFilter = currentUser.role === 'admin' ? {} : { userId: currentUser._id };
+
+    // Son aktiviteleri getir
+    const activities = await Activity.find(userFilter)
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .lean();
+
+    return NextResponse.json(activities);
+    
   } catch (error) {
-    console.error('Error fetching dashboard activities:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch dashboard activities' },
-      { status: 500 }
-    );
+    console.error('Dashboard Activities API Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 

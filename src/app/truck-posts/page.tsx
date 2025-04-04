@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, MapPinIcon, TruckIcon, InfoIcon, PhoneIcon, RefreshCwIcon, ChevronDownIcon, ArrowRight } from "lucide-react";
@@ -61,7 +61,7 @@ interface TruckPost {
 type SortField = 'date' | 'route' | 'status';
 type SortOrder = 'asc' | 'desc';
 
-export default function TruckPostsPage() {
+function TruckPostsContent() {
   const [posts, setPosts] = useState<TruckPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<SortField>('date');
@@ -548,5 +548,13 @@ export default function TruckPostsPage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+export default function TruckPostsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TruckPostsContent />
+    </Suspense>
   );
 } 

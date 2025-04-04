@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Separator } from "@/components/ui/separator";
 import { CalendarIcon, MapPinIcon, TruckIcon, UserIcon, ScaleIcon, BoxIcon, BanknoteIcon } from "lucide-react";
 import Link from "next/link";
+import type { CargoPostType } from "@/lib/actions/cargo-post.actions";
 
 interface PageProps {
   params: {

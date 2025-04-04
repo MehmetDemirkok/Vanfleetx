@@ -1,33 +1,49 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { TR, BG, RO } from 'country-flag-icons/react/3x2';
-import { MapPinIcon, TruckIcon, ScaleIcon, CurrencyLiraIcon, CalendarIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { MapPin, Truck, Scale, Banknote, Calendar, Info } from 'lucide-react';
 
 // Türkiye şehirleri
 const turkiyeCities = [
-  'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin', 'Aydın', 'Balıkesir',
-  'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli',
-  'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari',
-  'Hatay', 'Isparta', 'Mersin', 'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir',
-  'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
+  'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
+  'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
+  'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
+  'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
+  'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
+  'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
   'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas', 'Tekirdağ', 'Tokat',
-  'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt', 'Karaman',
-  'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük', 'Kilis', 'Osmaniye', 'Düzce'
+  'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt',
+  'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük',
+  'Kilis', 'Osmaniye', 'Düzce'
 ];
 
 // Bulgaristan şehirleri
 const bulgarianCities = [
-  'Sofya', 'Plovdiv', 'Varna', 'Burgaz', 'Ruse', 'Stara Zagora', 'Pleven', 'Sliven', 'Dobrich', 'Şumnu',
-  'Pernik', 'Haskovo', 'Yambol', 'Pazarcık', 'Blagoevgrad', 'Veliko Tarnovo', 'Vratsa', 'Gabrovo', 'Asenovgrad', 'Vidin'
+  'Sofia', 'Plovdiv', 'Varna', 'Burgas', 'Ruse', 'Stara Zagora', 'Pleven', 'Sliven',
+  'Dobrich', 'Shumen', 'Pernik', 'Haskovo', 'Yambol', 'Pazardzhik', 'Blagoevgrad',
+  'Veliko Tarnovo', 'Vratsa', 'Gabrovo', 'Asenovgrad', 'Vidin', 'Kazanlak', 'Kyustendil',
+  'Montana', 'Targovishte', 'Lovech', 'Silistra', 'Razgrad', 'Gorna Oryahovitsa',
+  'Kardzhali', 'Dupnitsa', 'Dimitrovgrad', 'Svishtov', 'Smolyan', 'Sevlievo', 'Lom',
+  'Karlovo', 'Nova Zagora', 'Troyan', 'Aytos', 'Botevgrad', 'Gotse Delchev', 'Peshtera',
+  'Harmanli', 'Karnobat', 'Svilengrad', 'Panagyurishte', 'Chirpan', 'Popovo', 'Rakovski'
 ];
 
 // Romanya şehirleri
 const romanianCities = [
-  'Bükreş', 'Cluj-Napoca', 'Timişoara', 'Iaşi', 'Constanţa', 'Craiova', 'Braşov', 'Galaţi', 'Ploieşti', 'Oradea',
-  'Brăila', 'Arad', 'Piteşti', 'Sibiu', 'Bacău', 'Târgu Mureş', 'Baia Mare', 'Buzău', 'Botoşani', 'Satu Mare'
+  'Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova', 'Brașov',
+  'Galați', 'Ploiești', 'Oradea', 'Brăila', 'Arad', 'Pitești', 'Sibiu', 'Bacău',
+  'Târgu Mureș', 'Baia Mare', 'Buzău', 'Botoșani', 'Satu Mare', 'Râmnicu Vâlcea',
+  'Drobeta-Turnu Severin', 'Suceava', 'Piatra Neamț', 'Târgu Jiu', 'Târgoviște',
+  'Focșani', 'Bistrița', 'Reșița', 'Tulcea', 'Călărași', 'Giurgiu', 'Hunedoara',
+  'Alba Iulia', 'Deva', 'Zalău', 'Sfântu Gheorghe', 'Bârlad', 'Vaslui', 'Roman',
+  'Turda', 'Mediaș', 'Slobozia', 'Alexandria', 'Voluntari', 'Miercurea Ciuc',
+  'Lugoj', 'Medgidia', 'Onești', 'Petroșani'
 ];
 
 // Ülkeler listesi

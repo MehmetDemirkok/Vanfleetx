@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
-import { VehiclePost } from '@/app/dashboard/truck-posts/columns';
+import { TruckPost } from '@/app/dashboard/truck-posts/columns';
 
 interface UseVehiclePostsProps {
   userId?: string;
 }
 
 interface UseVehiclePostsReturn {
-  data: VehiclePost[] | null;
+  data: TruckPost[] | null;
   isLoading: boolean;
   error: Error | null;
   mutate: () => Promise<void>;
 }
 
 export function useVehiclePosts({ userId }: UseVehiclePostsProps = {}): UseVehiclePostsReturn {
-  const [data, setData] = useState<VehiclePost[] | null>(null);
+  const [data, setData] = useState<TruckPost[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { MapPinIcon, TruckIcon, CalendarIcon, PhoneIcon, InformationCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
@@ -26,7 +26,7 @@ interface CargoPost {
   };
 }
 
-export default function CargoPostsPage() {
+function CargoPostsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -321,5 +321,13 @@ export default function CargoPostsPage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+export default function CargoPostsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CargoPostsContent />
+    </Suspense>
   );
 } 

@@ -3,10 +3,8 @@ import { connectToDatabase } from '@/lib/db';
 import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { Activity } from '@/lib/models/activity.model';
 
-// Explicitly set the runtime to Node.js
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -27,6 +25,7 @@ export async function GET() {
 
     const CargoPost = mongoose.model('CargoPost');
     const TruckPost = mongoose.model('TruckPost');
+    const Activity = mongoose.model('Activity');
 
     // Kullanıcı rolüne göre filtreleme koşulları
     const userFilter = currentUser.role === 'admin' ? {} : { userId: currentUser._id };

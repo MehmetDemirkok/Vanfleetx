@@ -1,61 +1,75 @@
 import { NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db';
+import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/db';
-import { CargoPost } from '@/lib/models/cargo-post.model';
-import { TruckPost } from '@/lib/models/truck-post.model';
 
-// Explicitly set the runtime to Node.js
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectToDatabase();
 
-    // Kullanıcının aktif ilanlarını say
-    const activeCargoPosts = await CargoPost.countDocuments({
-      createdBy: session.user.id,
-      status: 'active'
+    const User = mongoose.model('User');
+    const currentUser = await User.findById(session.user.id);
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const CargoPost = mongoose.model('CargoPost');
+    const TruckPost = mongoose.model('TruckPost');
+
+    // Kullanıcı rolüne göre filtreleme koşulları
+    const userFilter = currentUser.role === 'admin' ? {} : { userId: currentUser._id };
+
+    // Aktif ilanlar
+    const activeCargoPosts = await CargoPost.countDocuments({ 
+      ...userFilter,
+      status: 'active' 
+    });
+    
+    const activeTruckPosts = await TruckPost.countDocuments({ 
+      ...userFilter,
+      status: 'active' 
     });
 
-    const activeTruckPosts = await TruckPost.countDocuments({
-      createdBy: session.user.id,
-      status: 'active'
+    // Tamamlanan ilanlar
+    const completedCargoPosts = await CargoPost.countDocuments({ 
+      ...userFilter,
+      status: 'completed' 
+    });
+    
+    const completedTruckPosts = await TruckPost.countDocuments({ 
+      ...userFilter,
+      status: 'completed' 
     });
 
-    // Toplam taşıma sayısı (tamamlanmış ilanlar)
-    const completedCargoPosts = await CargoPost.countDocuments({
-      createdBy: session.user.id,
-      status: 'completed'
-    });
+    // Toplam ilanlar
+    const totalCargoPosts = await CargoPost.countDocuments(userFilter);
+    const totalTruckPosts = await TruckPost.countDocuments(userFilter);
 
-    const completedTruckPosts = await TruckPost.countDocuments({
-      createdBy: session.user.id,
-      status: 'completed'
-    });
-
-    // Okunmamış mesaj sayısı (şimdilik sabit)
+    // Okunmamış mesajlar (şimdilik 0 olarak ayarlandı)
     const unreadMessages = 0;
 
     return NextResponse.json({
-      activePosts: activeCargoPosts + activeTruckPosts,
-      totalShipments: completedCargoPosts + completedTruckPosts,
+      activeCargoPosts,
+      activeTruckPosts,
+      completedCargoPosts,
+      completedTruckPosts,
+      totalCargoPosts,
+      totalTruckPosts,
       unreadMessages
     });
+    
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch dashboard stats' },
-      { status: 500 }
-    );
+    console.error('Dashboard Stats API Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 

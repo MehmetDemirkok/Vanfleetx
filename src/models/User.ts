@@ -15,7 +15,6 @@ const userSchema = new mongoose.Schema<IUser>({
   email: {
     type: String,
     required: [true, 'Email gerekli'],
-    unique: true,
     trim: true,
     lowercase: true,
   },
@@ -44,6 +43,9 @@ const userSchema = new mongoose.Schema<IUser>({
     default: Date.now,
   },
 });
+
+// Add email index
+userSchema.index({ email: 1 }, { unique: true });
 
 // Şifre hashleme
 userSchema.pre('save', async function (next) {

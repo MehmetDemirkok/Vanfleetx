@@ -78,6 +78,13 @@ export async function PUT(request: Request) {
       { new: true }
     ).select('-password');
 
+    if (!updatedUser) {
+      return NextResponse.json(
+        { error: 'Failed to update user profile' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       ...updatedUser.toObject(),
       _id: updatedUser._id.toString(),
