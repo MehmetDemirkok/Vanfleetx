@@ -41,6 +41,44 @@ async function deleteVehiclePost(id: string) {
   }
 }
 
+// Create a proper React component for the cell
+const ActionCell = ({ row }: { row: any }) => {
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    try {
+      await deleteVehiclePost(row.original._id);
+      toast.success("İlan başarıyla silindi");
+      router.refresh();
+    } catch (error) {
+      toast.error("İlan silinirken bir hata oluştu");
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Menüyü aç</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => router.push(`/vehicle-posts/${row.original._id}/edit`)}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          Düzenle
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleDelete}>
+          <Trash className="mr-2 h-4 w-4" />
+          Sil
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
 export const columns: ColumnDef<VehiclePost>[] = [
   {
     accessorKey: "title",
@@ -105,42 +143,6 @@ export const columns: ColumnDef<VehiclePost>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const post = row.original;
-      const router = useRouter();
-
-      const handleDelete = async () => {
-        try {
-          await deleteVehiclePost(post._id);
-          toast.success("İlan başarıyla silindi");
-          router.refresh();
-        } catch (error) {
-          toast.error("İlan silinirken bir hata oluştu");
-        }
-      };
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Menüyü aç</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => router.push(`/vehicle-posts/${post._id}/edit`)}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Düzenle
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete}>
-              <Trash className="mr-2 h-4 w-4" />
-              Sil
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <ActionCell row={row} />
   },
 ]; 

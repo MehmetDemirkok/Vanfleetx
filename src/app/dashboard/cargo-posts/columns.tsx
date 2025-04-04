@@ -38,6 +38,82 @@ export type CargoPost = {
   userId: string;
 };
 
+const ActionCell = ({ row }: { row: any }) => {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      const post = row.original;
+      if (!post || !post._id) {
+        return;
+      }
+      const response = await fetch(`/api/cargo-posts/${post._id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "İlan silinirken bir hata oluştu");
+      }
+
+      toast.success("İlan başarıyla silindi");
+      router.refresh();
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      toast.error(error.message || "İlan silinirken bir hata oluştu");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <span className="sr-only">Menüyü aç</span>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => router.push(`/cargo-posts/${row.original._id}/edit`)}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          Düzenle
+        </DropdownMenuItem>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Trash className="mr-2 h-4 w-4" />
+              Sil
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>İlanı Sil</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bu ilanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Siliniyor..." : "Sil"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
 export const columns: ColumnDef<CargoPost>[] = [
   {
     accessorKey: "title",
@@ -130,85 +206,6 @@ export const columns: ColumnDef<CargoPost>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      try {
-        const router = useRouter();
-        const post = row.original;
-        const [isDeleting, setIsDeleting] = useState(false);
-
-        if (!post || !post._id) {
-          return null;
-        }
-
-        const handleDelete = async () => {
-          try {
-            setIsDeleting(true);
-            const response = await fetch(`/api/cargo-posts/${post._id}`, {
-              method: "DELETE",
-            });
-
-            if (!response.ok) {
-              const data = await response.json();
-              throw new Error(data.error || "İlan silinirken bir hata oluştu");
-            }
-
-            toast.success("İlan başarıyla silindi");
-            router.refresh();
-          } catch (error: any) {
-            console.error("Delete error:", error);
-            toast.error(error.message || "İlan silinirken bir hata oluştu");
-          } finally {
-            setIsDeleting(false);
-          }
-        };
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Menüyü aç</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => router.push(`/cargo-posts/${post._id}/edit`)}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Düzenle
-              </DropdownMenuItem>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Trash className="mr-2 h-4 w-4" />
-                    Sil
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>İlanı Sil</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Bu ilanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>İptal</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-red-600 hover:bg-red-700"
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? "Siliniyor..." : "Sil"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      } catch (error) {
-        return null;
-      }
-    },
+    cell: ({ row }) => <ActionCell row={row} />
   },
 ]; 
