@@ -38,6 +38,7 @@
     "clsx": "^2.1.1",
     "country-flag-icons": "^1.5.18",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.6.3",
     "lucide-react": "^0.485.0",
     "mongodb": "^6.15.0",
     "mongoose": "^8.13.1",
