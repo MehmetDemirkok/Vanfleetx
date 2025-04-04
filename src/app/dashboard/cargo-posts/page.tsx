@@ -21,10 +21,12 @@ export default function DashboardCargoPosts() {
     }
   }, [status, router]);
 
+  // Only fetch cargo posts when we have a valid user ID
   const { data: cargoPosts, isLoading, error } = useCargoPosts({ 
     userId: session?.user?.id 
   });
 
+  // Show loading state while session is loading or data is being fetched
   if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -33,12 +35,18 @@ export default function DashboardCargoPosts() {
     );
   }
 
+  // Show error state if there's an error
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <p className="text-red-500">Bir hata oluştu. Lütfen tekrar deneyin.</p>
       </div>
     );
+  }
+
+  // Don't render the table until we have a valid session and data
+  if (!session?.user?.id || !cargoPosts) {
+    return null;
   }
 
   return (
@@ -55,7 +63,7 @@ export default function DashboardCargoPosts() {
 
       <DataTable
         columns={columns}
-        data={cargoPosts || []}
+        data={cargoPosts}
       />
     </div>
   );

@@ -40,7 +40,14 @@ export function useCargoPosts({ userId }: UseCargoPostsProps): UseCargoPostsRetu
   };
 
   useEffect(() => {
-    fetchData();
+    // Only fetch data if userId is available
+    if (userId) {
+      fetchData();
+    } else {
+      // Reset data when userId is not available
+      setData(null);
+      setIsLoading(false);
+    }
   }, [userId]);
 
   const mutate = async () => {

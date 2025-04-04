@@ -19,25 +19,17 @@ interface ICargoPost {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await connectToDatabase();
     const CargoPost = mongoose.model<ICargoPost>('CargoPost');
 
-    // URL'den userId parametresini al
+    // Get userId from query parameters if provided
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    // Kullanıcı sadece kendi ilanlarını görebilir
-    // Admin tüm ilanları görebilir
-    const query = session.user.role === 'admin' 
-      ? userId ? { userId } : {}
-      : { userId: session.user.id };
+    // Build query based on whether userId is provided
+    const query = userId ? { userId } : {};
 
+    // Get posts with optional filtering
     const posts = await CargoPost.find(query)
       .sort({ createdAt: -1 })
       .lean();
