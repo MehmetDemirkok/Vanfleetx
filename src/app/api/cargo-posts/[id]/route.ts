@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db';
 import { CargoPost } from '@/lib/models/cargo-post.model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { Types } from 'mongoose';
 
 // Explicitly set the runtime to Node.js
 export const runtime = 'nodejs';
@@ -11,6 +12,33 @@ interface RouteParams {
   params: {
     id: string;
   };
+}
+
+interface PopulatedCargoPost {
+  _id: Types.ObjectId;
+  loadingCity: string;
+  loadingAddress: string;
+  unloadingCity: string;
+  unloadingAddress: string;
+  loadingDate: Date;
+  unloadingDate: Date;
+  vehicleType: string;
+  description?: string;
+  status: 'active' | 'inactive' | 'completed' | 'cancelled';
+  userId: Types.ObjectId;
+  createdBy: {
+    _id: Types.ObjectId;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  weight?: number;
+  volume?: number;
+  price?: number;
+  palletCount?: number;
+  palletType?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
@@ -23,7 +51,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         select: 'name email phone',
         model: 'User'
       })
-      .lean();
+      .lean() as PopulatedCargoPost | null;
 
     if (!post) {
       return NextResponse.json(
@@ -88,16 +116,23 @@ export async function PUT(request: Request, { params }: RouteParams) {
       path: 'createdBy',
       select: 'name email phone',
       model: 'User'
-    });
+    }).lean() as PopulatedCargoPost | null;
+
+    if (!updatedPost) {
+      return NextResponse.json(
+        { error: 'Failed to update cargo post' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      ...updatedPost!.toObject(),
-      _id: updatedPost!._id.toString(),
-      createdAt: updatedPost!.createdAt?.toISOString(),
-      updatedAt: updatedPost!.updatedAt?.toISOString(),
-      createdBy: updatedPost!.createdBy ? {
-        ...updatedPost!.createdBy,
-        _id: updatedPost!.createdBy._id.toString()
+      ...updatedPost,
+      _id: updatedPost._id.toString(),
+      createdAt: updatedPost.createdAt?.toISOString(),
+      updatedAt: updatedPost.updatedAt?.toISOString(),
+      createdBy: updatedPost.createdBy ? {
+        ...updatedPost.createdBy,
+        _id: updatedPost.createdBy._id.toString()
       } : null
     });
   } catch (error) {
