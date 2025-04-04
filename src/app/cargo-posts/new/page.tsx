@@ -159,16 +159,45 @@ export default function NewCargoPost() {
     try {
       setIsSubmitting(true);
       
-      // Combine date and time fields
-      const submissionData: SubmissionData = {
-        ...formData,
+      // Validate required fields
+      const requiredFields = [
+        'title',
+        'loadingCity',
+        'loadingAddress',
+        'unloadingCity',
+        'unloadingAddress',
+        'loadingDate',
+        'cargoType',
+        'weight',
+        'volume',
+        'price'
+      ] as const;
+
+      const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+      if (missingFields.length > 0) {
+        throw new Error(`Lütfen tüm zorunlu alanları doldurun: ${missingFields.join(', ')}`);
+      }
+
+      // Format the data
+      const submissionData = {
+        title: formData.title.trim(),
+        loadingCity: formData.loadingCity.trim(),
+        loadingAddress: formData.loadingAddress.trim(),
+        unloadingCity: formData.unloadingCity.trim(),
+        unloadingAddress: formData.unloadingAddress.trim(),
         loadingDate: formData.loadingDate && formData.loadingTime 
           ? `${formData.loadingDate}T${formData.loadingTime}` 
-          : '',
+          : formData.loadingDate,
+        cargoType: formData.cargoType,
+        weight: Number(formData.weight),
+        volume: Number(formData.volume),
+        price: Number(formData.price),
+        description: formData.description.trim(),
+        palletCount: formData.palletCount ? Number(formData.palletCount) : undefined,
+        palletType: formData.palletType
       };
-      
-      // Remove the separate time fields before submission
-      delete submissionData.loadingTime;
+
+      console.log('Sending data:', submissionData);
 
       const response = await fetch('/api/cargo-posts', {
         method: 'POST',
@@ -178,14 +207,17 @@ export default function NewCargoPost() {
         body: JSON.stringify(submissionData),
       });
 
-      if (response.ok) {
-        router.push('/cargo-posts');
-      } else {
-        throw new Error('İlan oluşturulurken bir hata oluştu');
+      const data = await response.json();
+      console.log('Response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'İlan oluşturulurken bir hata oluştu');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('İlan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
+
+      router.push('/dashboard/cargo-posts');
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      alert(error.message || 'İlan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setIsSubmitting(false);
     }

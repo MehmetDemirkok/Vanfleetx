@@ -4,12 +4,11 @@ import { cn } from "@/lib/utils";
 
 const Separator = React.forwardRef<
   React.ElementRef<typeof SeparatorPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root>
->(
-  (
-    { className, orientation = "horizontal", decorative = true, ...props },
-    ref
-  ) => (
+  React.ComponentPropsWithoutRef<typeof SeparatorPrimitive.Root> & {
+    label?: string;
+  }
+>(({ className, orientation = "horizontal", decorative = true, label, ...props }, ref) => (
+  <div className="relative flex items-center">
     <SeparatorPrimitive.Root
       ref={ref}
       decorative={decorative}
@@ -21,8 +20,13 @@ const Separator = React.forwardRef<
       )}
       {...props}
     />
-  )
-);
+    {label && (
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-sm text-muted-foreground">
+        {label}
+      </div>
+    )}
+  </div>
+));
 Separator.displayName = SeparatorPrimitive.Root.displayName;
 
 export { Separator }; 

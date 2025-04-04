@@ -1,4 +1,28 @@
-import React from 'react';
+"use client";
+
+import * as React from "react";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -6,158 +30,180 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Search,
-} from 'lucide-react';
+} from "@/components/ui/table";
 
-interface Column<T> {
-  header: string;
-  accessorKey: keyof T;
-  cell?: (item: T) => React.ReactNode;
-}
-
-interface DataTableProps<T> {
-  data: T[];
-  columns: Column<T>[];
-  onEdit?: (item: T) => void;
-  onDelete?: (item: T) => void;
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  onEdit?: (item: TData) => void;
+  onDelete?: (item: TData) => void;
   searchPlaceholder?: string;
-  onSearch?: (query: string) => void;
+  onSearch?: (value: string) => void;
+  className?: string;
 }
 
-export function DataTable<T>({
-  data,
+export function DataTable<TData, TValue>({
   columns,
+  data,
   onEdit,
   onDelete,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder = "Ara...",
   onSearch,
-}: DataTableProps<T>) {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const itemsPerPage = 10;
+  className,
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [globalFilter, setGlobalFilter] = React.useState("");
 
-  const totalPages = Math.ceil(data.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = data.slice(startIndex, endIndex);
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      globalFilter,
+    },
+  });
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    onSearch?.(query);
-  };
+  React.useEffect(() => {
+    if (onSearch) {
+      onSearch(globalFilter);
+    }
+  }, [globalFilter, onSearch]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="relative w-72">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={handleSearch}
-            className="pl-8"
-          />
-        </div>
+    <div className={cn("space-y-4", className)}>
+      <div className="flex items-center py-4">
+        <Input
+          placeholder={searchPlaceholder}
+          value={globalFilter ?? ""}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm"
+          aria-label="Arama"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="ml-auto"
+              aria-label="Sütunları göster/gizle"
+            >
+              Sütunlar <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={String(column.accessorKey)}>
-                  {column.header}
-                </TableHead>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
               ))}
-              {(onEdit || onDelete) && <TableHead>Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentData.map((item, index) => (
-              <TableRow key={index}>
-                {columns.map((column) => (
-                  <TableCell key={String(column.accessorKey)}>
-                    {column.cell
-                      ? column.cell(item)
-                      : String(item[column.accessorKey])}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    Kayıt bulunamadı
                   </TableCell>
-                ))}
-                {(onEdit || onDelete) && (
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {onEdit && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onEdit(item)}
-                        >
-                          Edit
-                        </Button>
-                      )}
-                      {onDelete && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onDelete(item)}
-                        >
-                          Delete
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Showing {startIndex + 1} to {Math.min(endIndex, data.length)} of{' '}
-          {data.length} entries
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} /{" "}
+          {table.getFilteredRowModel().rows.length} satır seçildi
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="space-x-2">
           <Button
             variant="outline"
-            size="icon"
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            aria-label="Önceki sayfa"
           >
-            <ChevronsLeft className="h-4 w-4" />
+            Önceki
           </Button>
           <Button
             variant="outline"
-            size="icon"
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            aria-label="Sonraki sayfa"
           >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronsRight className="h-4 w-4" />
+            Sonraki
           </Button>
         </div>
       </div>

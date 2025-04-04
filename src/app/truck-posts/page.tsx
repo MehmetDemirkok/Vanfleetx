@@ -39,13 +39,15 @@ import { Modal } from '@/components/ui/Modal';
 
 interface TruckPost {
   _id: string;
+  title: string;
   currentLocation: string;
   destination: string;
   availableDate: string;
   truckType: string;
   capacity: number;
   description?: string;
-  status: 'active' | 'inactive' | 'completed';
+  price?: number;
+  status: 'active' | 'pending' | 'completed' | 'cancelled';
   createdBy: {
     _id: string;
     name: string;
@@ -73,27 +75,27 @@ export default function TruckPostsPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
-    const fetchPosts = async () => {
-      try {
-        setLoading(true);
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const res = await fetch(`${baseUrl}/api/truck-posts${searchParams ? `?${searchParams.toString()}` : ''}`, {
         cache: 'no-store'
       });
         
-        if (!res.ok) {
-          throw new Error('Failed to fetch truck posts');
-        }
-
-        const data = await res.json();
-        setPosts(data);
-      } catch (error) {
-        console.error('Error fetching truck posts:', error);
-        setPosts([]);
-      } finally {
-        setLoading(false);
+      if (!res.ok) {
+        throw new Error('Failed to fetch truck posts');
       }
-    };
+
+      const data = await res.json();
+      setPosts(data);
+    } catch (error) {
+      console.error('Error fetching truck posts:', error);
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchPosts();
@@ -166,28 +168,44 @@ export default function TruckPostsPage() {
     }
   };
 
-  const getStatusInfo = (status: TruckPost['status']) => {
-    const statusMap = {
-      'active': {
-        text: 'Aktif',
-        bgColor: 'bg-green-50',
-        textColor: 'text-green-700',
-        dotColor: 'bg-green-400'
-      },
-      'completed': {
-        text: 'Tamamlandı',
-        bgColor: 'bg-blue-50',
-        textColor: 'text-blue-700',
-        dotColor: 'bg-blue-400'
-      },
-      'inactive': {
-        text: 'Pasif',
-        bgColor: 'bg-gray-50',
-        textColor: 'text-gray-700',
-        dotColor: 'bg-gray-400'
-      }
-    };
-    return statusMap[status];
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'active':
+        return {
+          text: 'Aktif',
+          bgColor: 'bg-green-100',
+          textColor: 'text-green-800',
+          dotColor: 'bg-green-500'
+        };
+      case 'pending':
+        return {
+          text: 'Beklemede',
+          bgColor: 'bg-yellow-100',
+          textColor: 'text-yellow-800',
+          dotColor: 'bg-yellow-500'
+        };
+      case 'completed':
+        return {
+          text: 'Tamamlandı',
+          bgColor: 'bg-blue-100',
+          textColor: 'text-blue-800',
+          dotColor: 'bg-blue-500'
+        };
+      case 'cancelled':
+        return {
+          text: 'İptal Edildi',
+          bgColor: 'bg-red-100',
+          textColor: 'text-red-800',
+          dotColor: 'bg-red-500'
+        };
+      default:
+        return {
+          text: 'Bilinmiyor',
+          bgColor: 'bg-gray-100',
+          textColor: 'text-gray-800',
+          dotColor: 'bg-gray-500'
+        };
+    }
   };
 
   const handleDetailClick = (post: TruckPost) => {
@@ -216,26 +234,27 @@ export default function TruckPostsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold text-gray-900">Araç İlanları</h1>
-          <Button asChild>
-            <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
-          </Button>
-        </div>
-        <SearchFilters 
-          baseUrl="/truck-posts"
-          vehicleTypes={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'tir', label: 'Tır' },
-            { value: 'kamyon', label: 'Kamyon' },
-            { value: 'kamyonet', label: 'Kamyonet' }
-          ]}
-          statusOptions={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'active', label: 'Aktif' },
-            { value: 'inactive', label: 'Pasif' },
-            { value: 'completed', label: 'Tamamlandı' }
-          ]}
-          searchPlaceholder="Konum ara..."
-        />
+            <Button asChild>
+              <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
+            </Button>
+          </div>
+          <SearchFilters 
+            baseUrl="/truck-posts"
+            vehicleTypes={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'tir', label: 'Tır' },
+              { value: 'kamyon', label: 'Kamyon' },
+              { value: 'kamyonet', label: 'Kamyonet' }
+            ]}
+            statusOptions={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'active', label: 'Aktif' },
+              { value: 'pending', label: 'Beklemede' },
+              { value: 'completed', label: 'Tamamlandı' },
+              { value: 'cancelled', label: 'İptal Edildi' }
+            ]}
+            searchPlaceholder="Konum ara..."
+          />
           <div className="mt-8">
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -260,26 +279,27 @@ export default function TruckPostsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold text-gray-900">Araç İlanları</h1>
-          <Button asChild>
-            <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
-          </Button>
-        </div>
-        <SearchFilters 
-          baseUrl="/truck-posts"
-          vehicleTypes={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'tir', label: 'Tır' },
-            { value: 'kamyon', label: 'Kamyon' },
-            { value: 'kamyonet', label: 'Kamyonet' }
-          ]}
-          statusOptions={[
-            { value: 'all', label: 'Tümü' },
-            { value: 'active', label: 'Aktif' },
-            { value: 'inactive', label: 'Pasif' },
-            { value: 'completed', label: 'Tamamlandı' }
-          ]}
-          searchPlaceholder="Konum ara..."
-        />
+            <Button asChild>
+              <Link href="/truck-posts/new">Yeni İlan Ekle</Link>
+            </Button>
+          </div>
+          <SearchFilters 
+            baseUrl="/truck-posts"
+            vehicleTypes={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'tir', label: 'Tır' },
+              { value: 'kamyon', label: 'Kamyon' },
+              { value: 'kamyonet', label: 'Kamyonet' }
+            ]}
+            statusOptions={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'active', label: 'Aktif' },
+              { value: 'pending', label: 'Beklemede' },
+              { value: 'completed', label: 'Tamamlandı' },
+              { value: 'cancelled', label: 'İptal Edildi' }
+            ]}
+            searchPlaceholder="Konum ara..."
+          />
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <TruckIcon className="w-16 h-16 text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold mb-2">Henüz İlan Bulunmuyor</h3>
@@ -315,176 +335,144 @@ export default function TruckPostsPage() {
               Yeni İlan
             </Link>
           </div>
-      </div>
+        </div>
 
-      <SearchFilters 
-        baseUrl="/truck-posts"
-        vehicleTypes={[
-          { value: 'all', label: 'Tümü' },
-          { value: 'tir', label: 'Tır' },
-          { value: 'kamyon', label: 'Kamyon' },
-          { value: 'kamyonet', label: 'Kamyonet' }
-        ]}
-        statusOptions={[
-          { value: 'all', label: 'Tümü' },
-          { value: 'active', label: 'Aktif' },
-          { value: 'inactive', label: 'Pasif' },
-          { value: 'completed', label: 'Tamamlandı' }
-        ]}
-        searchPlaceholder="Konum ara..."
-      />
+        <SearchFilters 
+          baseUrl="/truck-posts"
+          vehicleTypes={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'tir', label: 'Tır' },
+            { value: 'kamyon', label: 'Kamyon' },
+            { value: 'kamyonet', label: 'Kamyonet' }
+          ]}
+          statusOptions={[
+            { value: 'all', label: 'Tümü' },
+            { value: 'active', label: 'Aktif' },
+            { value: 'pending', label: 'Beklemede' },
+            { value: 'completed', label: 'Tamamlandı' },
+            { value: 'cancelled', label: 'İptal Edildi' }
+          ]}
+          searchPlaceholder="Konum ara..."
+        />
 
-        <div className="bg-white shadow-sm rounded-lg overflow-hidden mt-6">
-          <div className="overflow-x-auto">
-        <TooltipProvider>
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[180px]">
-                      Güzergah
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Adresler
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tarih
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Araç Bilgisi
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Durum
-                    </th>
-                    <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedPosts.map((post) => {
-                    const statusInfo = getStatusInfo(post.status);
-                    return (
-                      <tr key={post._id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-900">{post.currentLocation}</span>
-                            <ArrowLongRightIcon className="h-4 w-4 text-gray-400" />
-                            <span className="text-xs font-medium text-gray-900">{post.destination}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center">
-                              <div className="h-4 w-4 rounded-full bg-green-100 flex items-center justify-center">
-                                <span className="text-[10px] text-green-800">M</span>
-                              </div>
-                              <div className="ml-1.5">
-                                <div className="text-xs text-gray-900">{post.currentLocation}</div>
-                              </div>
-                            </div>
-                            <div className="flex items-center">
-                              <div className="h-4 w-4 rounded-full bg-red-100 flex items-center justify-center">
-                                <span className="text-[10px] text-red-800">H</span>
-                              </div>
-                              <div className="ml-1.5">
-                                <div className="text-xs text-gray-900">{post.destination}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <CalendarIcon className="h-4 w-4 text-gray-400 mr-1.5" />
-                            <div className="text-xs text-gray-900">{formatDate(post.availableDate)}</div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <TruckIcon className="h-4 w-4 text-gray-400 mr-1.5" />
-                            <div>
-                              <div className="text-xs text-gray-900">{post.truckType}</div>
-                              <div className="text-[10px] text-gray-500">{post.capacity} ton</div>
-                    </div>
+        <div className="mt-8 bg-white shadow-sm rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[250px]">
+                  <button
+                    className="flex items-center text-xs font-medium text-gray-500 hover:text-gray-700"
+                    onClick={() => handleSort('route')}
+                  >
+                    Güzergah
+                    <ChevronDownIcon className={`ml-1 h-4 w-4 ${sortField === 'route' ? 'transform rotate-180' : ''}`} />
+                  </button>
+                </TableHead>
+                <TableHead className="w-[200px]">
+                  <button
+                    className="flex items-center text-xs font-medium text-gray-500 hover:text-gray-700"
+                    onClick={() => handleSort('date')}
+                  >
+                    Tarih
+                    <ChevronDownIcon className={`ml-1 h-4 w-4 ${sortField === 'date' ? 'transform rotate-180' : ''}`} />
+                  </button>
+                </TableHead>
+                <TableHead className="w-[150px]">Araç Tipi</TableHead>
+                <TableHead className="w-[100px]">
+                  <button
+                    className="flex items-center text-xs font-medium text-gray-500 hover:text-gray-700"
+                    onClick={() => handleSort('status')}
+                  >
+                    Durum
+                    <ChevronDownIcon className={`ml-1 h-4 w-4 ${sortField === 'status' ? 'transform rotate-180' : ''}`} />
+                  </button>
+                </TableHead>
+                <TableHead className="w-[100px]">Fiyat</TableHead>
+                <TableHead className="w-[100px] text-right">İşlemler</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedPosts.map((post) => {
+                const statusInfo = getStatusInfo(post.status);
+                return (
+                  <TableRow key={post._id} className="hover:bg-gray-50">
+                    <TableCell className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-medium text-gray-900">{post.currentLocation}</span>
+                        <ArrowLongRightIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-xs font-medium text-gray-900">{post.destination}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <CalendarIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+                        <div className="text-xs text-gray-900">{formatDate(post.availableDate)}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <TruckIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+                        <div>
+                          <div className="text-xs text-gray-900">{post.truckType}</div>
+                          <div className="text-[10px] text-gray-500">{post.capacity} ton</div>
                         </div>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusInfo.bgColor} ${statusInfo.textColor}`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${statusInfo.dotColor} mr-1`}></span>
-                            {statusInfo.text}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusInfo.dotColor} mr-1`}></span>
+                        {statusInfo.text}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">
+                      {post.price ? `${post.price} ₺` : '-'}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 whitespace-nowrap text-right text-xs font-medium">
+                      <div className="flex justify-end space-x-1">
                         <button
+                          type="button"
                           onClick={() => handleDetailClick(post)}
-                          className="text-gray-400 hover:text-[#4263eb] p-1 rounded-md hover:bg-blue-50/50 transition-colors"
+                          className="text-[#4263eb] hover:text-[#364fc7]"
                         >
                           <InformationCircleIcon className="h-4 w-4" />
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="bg-[#4263eb]/90 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-md border border-blue-400/20">
-                        İlan Detayları
-                      </TooltipContent>
-                    </Tooltip>
-
-                    {post.createdBy && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => handleContactClick(post)}
-                            className="text-gray-400 hover:text-[#4263eb] p-1 rounded-md hover:bg-blue-50/50 transition-colors"
-                          >
-                            <PhoneIcon className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="bg-[#4263eb]/90 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-md border border-blue-400/20">
-                          İletişime Geç
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TooltipProvider>
-          </div>
+                        <button
+                          type="button"
+                          onClick={() => handleContactClick(post)}
+                          className="text-[#4263eb] hover:text-[#364fc7]"
+                        >
+                          <PhoneIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
 
         {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-            >
-              Önceki
-            </Button>
-            <div className="flex items-center gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <Button
-                  key={i + 1}
-                  variant={currentPage === i + 1 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </Button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-            >
-              Sonraki
-            </Button>
+          <div className="mt-4 flex justify-center">
+            <nav className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded-md text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Önceki
+              </button>
+              <span className="px-3 py-1 text-sm font-medium text-gray-700">
+                Sayfa {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded-md text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sonraki
+              </button>
+            </nav>
           </div>
         )}
       </div>
@@ -510,22 +498,20 @@ export default function TruckPostsPage() {
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Fiyat</h4>
                 <p className="mt-1 text-sm text-gray-900">
-                  {selectedPost.price} ₺
+                  {selectedPost.price ? `${selectedPost.price} ₺` : '-'}
                 </p>
               </div>
             </div>
 
             <div>
               <h4 className="text-sm font-medium text-gray-500">Yükleme Bilgileri</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.loadingCity}</p>
-              <p className="mt-1 text-sm text-gray-600">{selectedPost.loadingAddress}</p>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.currentLocation}</p>
               <p className="mt-1 text-sm text-gray-600">{formatDate(selectedPost.availableDate)}</p>
             </div>
 
             <div>
               <h4 className="text-sm font-medium text-gray-500">Teslimat Bilgileri</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.unloadingCity}</p>
-              <p className="mt-1 text-sm text-gray-600">{selectedPost.unloadingAddress}</p>
+              <p className="mt-1 text-sm text-gray-900">{selectedPost.destination}</p>
             </div>
 
             {selectedPost.description && (
@@ -557,15 +543,6 @@ export default function TruckPostsPage() {
             <div>
               <h4 className="text-sm font-medium text-gray-500">Telefon</h4>
               <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.phone || 'Belirtilmemiş'}</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsContactModalOpen(false)}
-                className="px-4 py-2 bg-[#4263eb] text-white rounded-md hover:bg-[#364fc7] text-sm font-medium"
-              >
-                Kapat
-              </button>
             </div>
           </div>
         )}

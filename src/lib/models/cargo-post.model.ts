@@ -11,7 +11,7 @@ const cargoPostSchema = new mongoose.Schema({
   description: { type: String },
   status: { 
     type: String, 
-    enum: ['active', 'inactive', 'completed'], 
+    enum: ['active', 'inactive', 'completed', 'cancelled'], 
     default: 'active' 
   },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

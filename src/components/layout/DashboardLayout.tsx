@@ -9,6 +9,7 @@ import {
   X,
   Package,
   FileText,
+  Truck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -26,6 +27,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       name: 'Dashboard',
       href: '/dashboard',
       icon: LayoutDashboard,
+    },
+    {
+      name: 'Yük İlanlarım',
+      href: '/dashboard/cargo-posts',
+      icon: Package,
+    },
+    {
+      name: 'Araç İlanlarım',
+      href: '/dashboard/truck-posts',
+      icon: Truck,
     },
   ];
 

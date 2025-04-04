@@ -1,145 +1,169 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
+import mongoose from 'mongoose';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { CargoPost } from '@/lib/models/cargo-post.model';
-import { Error as MongooseError } from 'mongoose';
 
-export async function GET(request: Request) {
+interface ICargoPost {
+  _id: mongoose.Types.ObjectId;
+  userId: string;
+  loadingCity: string;
+  unloadingCity: string;
+  loadingDate: Date;
+  unloadingDate: Date;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectToDatabase();
+    const CargoPost = mongoose.model<ICargoPost>('CargoPost');
 
+    // URL'den userId parametresini al
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const vehicleType = searchParams.get('vehicleType');
-    const status = searchParams.get('status');
-    const dateRange = searchParams.get('dateRange');
+    const userId = searchParams.get('userId');
 
-    let query: any = {};
-
-    if (search) {
-      query.$or = [
-        { loadingCity: { $regex: search, $options: 'i' } },
-        { unloadingCity: { $regex: search, $options: 'i' } },
-        { loadingAddress: { $regex: search, $options: 'i' } },
-        { unloadingAddress: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    if (vehicleType && vehicleType !== 'all') {
-      query.vehicleType = vehicleType;
-    }
-
-    if (status && status !== 'all') {
-      query.status = status;
-    }
-
-    if (dateRange && dateRange !== 'all') {
-      const now = new Date();
-      let dateFilter: Date;
-
-      switch (dateRange) {
-        case 'today':
-          dateFilter = new Date(now.setHours(0, 0, 0, 0));
-          break;
-        case 'week':
-          dateFilter = new Date(now.setDate(now.getDate() - 7));
-          break;
-        case 'month':
-          dateFilter = new Date(now.setMonth(now.getMonth() - 1));
-          break;
-        default:
-          dateFilter = new Date(0);
-      }
-
-      query.createdAt = { $gte: dateFilter };
-    }
+    // Kullanıcı sadece kendi ilanlarını görebilir
+    // Admin tüm ilanları görebilir
+    const query = session.user.role === 'admin' 
+      ? userId ? { userId } : {}
+      : { userId: session.user.id };
 
     const posts = await CargoPost.find(query)
-      .populate({
-        path: 'createdBy',
-        select: 'name email phone',
-        model: 'User'
-      })
       .sort({ createdAt: -1 })
       .lean();
 
     return NextResponse.json(posts.map(post => ({
       ...post,
       _id: post._id.toString(),
-      createdAt: post.createdAt?.toISOString(),
-      updatedAt: post.updatedAt?.toISOString(),
-      createdBy: post.createdBy ? {
-        ...post.createdBy,
-        _id: post.createdBy._id.toString()
-      } : null
+      createdAt: post.createdAt.toISOString(),
+      updatedAt: post.updatedAt.toISOString()
     })));
   } catch (error) {
-    console.error('Error fetching cargo posts:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.error('Cargo Posts API Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const data = await request.json();
-    
-    // Form verilerini model şemasına uygun şekilde dönüştür
-    const postData = {
+    const body = await request.json();
+    console.log('Received body:', body);
+
+    // Validate required fields
+    const requiredFields = [
+      'title',
+      'loadingCity',
+      'loadingAddress',
+      'unloadingCity',
+      'unloadingAddress',
+      'loadingDate',
+      'cargoType',
+      'weight',
+      'volume',
+      'price'
+    ];
+
+    const missingFields = requiredFields.filter(field => !body[field]);
+    if (missingFields.length > 0) {
+      console.log('Missing fields:', missingFields);
+      return NextResponse.json({ 
+        error: `Eksik alanlar: ${missingFields.join(', ')}` 
+      }, { status: 400 });
+    }
+
+    // Validate data types
+    if (isNaN(Number(body.weight)) || Number(body.weight) <= 0) {
+      return NextResponse.json({ 
+        error: 'Geçerli bir ağırlık değeri giriniz' 
+      }, { status: 400 });
+    }
+
+    if (isNaN(Number(body.volume)) || Number(body.volume) <= 0) {
+      return NextResponse.json({ 
+        error: 'Geçerli bir hacim değeri giriniz' 
+      }, { status: 400 });
+    }
+
+    if (isNaN(Number(body.price)) || Number(body.price) <= 0) {
+      return NextResponse.json({ 
+        error: 'Geçerli bir fiyat değeri giriniz' 
+      }, { status: 400 });
+    }
+
+    // Validate dates
+    const loadingDate = new Date(body.loadingDate);
+    if (isNaN(loadingDate.getTime())) {
+      return NextResponse.json({ 
+        error: 'Geçerli bir yükleme tarihi giriniz' 
+      }, { status: 400 });
+    }
+
+    // Connect to database
+    await connectToDatabase();
+
+    // Create new post
+    const newPost = new CargoPost({
+      title: body.title,
+      loadingCity: body.loadingCity,
+      loadingAddress: body.loadingAddress,
+      unloadingCity: body.unloadingCity,
+      unloadingAddress: body.unloadingAddress,
+      loadingDate: loadingDate,
+      unloadingDate: body.unloadingDate ? new Date(body.unloadingDate) : loadingDate,
+      vehicleType: body.vehicleType || 'tir',
+      description: body.description,
+      weight: Number(body.weight),
+      volume: Number(body.volume),
+      price: Number(body.price),
+      palletCount: body.palletCount ? Number(body.palletCount) : undefined,
+      palletType: body.palletType,
       userId: session.user.id,
-      loadingCity: data.loadingCity,
-      loadingAddress: data.loadingAddress || data.loadingCity, // Eğer adres girilmemişse şehir adres olarak kullanılır
-      unloadingCity: data.deliveryCity,
-      unloadingAddress: data.unloadingAddress || data.deliveryCity, // Eğer adres girilmemişse şehir adres olarak kullanılır
-      loadingDate: new Date(data.loadingDate),
-      unloadingDate: new Date(data.loadingDate), // Şimdilik yükleme tarihi ile aynı
-      vehicleType: data.cargoType,
-      description: data.description,
-      weight: data.weight ? parseFloat(data.weight) : undefined,
-      volume: data.volume ? parseFloat(data.volume) : undefined,
-      price: data.price ? parseFloat(data.price) : undefined,
-      palletCount: data.palletCount ? parseInt(data.palletCount) : undefined,
-      palletType: data.palletType,
-      status: 'active',
-      createdBy: session.user.id
-    };
-
-    const post = await CargoPost.create(postData);
-
-    await post.populate({
-      path: 'createdBy',
-      select: 'name email phone',
-      model: 'User'
+      createdBy: session.user.id,
+      status: 'active'
     });
+
+    console.log('Saving post:', newPost);
+    const savedPost = await newPost.save();
+    console.log('Post saved:', savedPost);
 
     return NextResponse.json({
-      ...post.toObject(),
-      _id: post._id.toString(),
-      createdAt: post.createdAt?.toISOString(),
-      updatedAt: post.updatedAt?.toISOString(),
-      createdBy: post.createdBy ? {
-        ...post.createdBy,
-        _id: post.createdBy._id.toString()
-      } : null
+      ...savedPost.toObject(),
+      _id: savedPost._id.toString(),
+      createdAt: savedPost.createdAt.toISOString(),
+      updatedAt: savedPost.updatedAt.toISOString()
     });
-  } catch (error) {
-    console.error('Error creating cargo post:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('Cargo Post Creation Error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((err: any) => err.message);
+      return NextResponse.json({ 
+        error: `Doğrulama hatası: ${validationErrors.join(', ')}` 
+      }, { status: 400 });
+    }
+
+    return NextResponse.json({ 
+      error: `İlan oluşturulurken bir hata oluştu: ${error.message}` 
+    }, { status: 500 });
   }
 } 

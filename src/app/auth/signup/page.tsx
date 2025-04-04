@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AtSymbolIcon, LockClosedIcon, BuildingOfficeIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { AtSymbolIcon, LockClosedIcon, BuildingOfficeIcon, GlobeAltIcon, UserIcon } from '@heroicons/react/24/outline';
 
 export default function SignUp() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     companyName: '',
@@ -105,6 +106,24 @@ export default function SignUp() {
                 {error}
               </div>
             )}
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <UserIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Ad Soyad"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
 
             <div>
               <div className="relative">

@@ -1,39 +1,59 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export interface IUser {
-  _id: string;
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  company?: string;
-  companyType?: 'LOGISTICS' | 'TRANSPORT';
-  address?: string;
-  city?: string;
-  country?: string;
-  role: 'user' | 'admin';
-  createdAt: Date;
-  updatedAt: Date;
+// Mevcut modeli kaldır
+if (mongoose.models.User) {
+  delete mongoose.models.User;
 }
 
+// Yeni şema oluştur
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  phone: { type: String },
-  company: { type: String },
-  companyType: { 
-    type: String, 
-    enum: ['LOGISTICS', 'TRANSPORT'],
-    default: 'LOGISTICS'
+  name: {
+    type: String,
+    required: true
   },
-  address: { type: String },
-  city: { type: String },
-  country: { type: String },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  email: {
+    type: String,
+    required: [true, 'Email adresi zorunludur'],
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: [true, 'Şifre zorunludur'],
+    minlength: [6, 'Şifre en az 6 karakter olmalıdır']
+  },
+  company: {
+    type: String,
+    required: [true, 'Şirket adı zorunludur'],
+    trim: true
+  },
+  country: {
+    type: String,
+    required: [true, 'Ülke zorunludur'],
+    trim: true
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
+  lastActive: {
+    type: Date,
+    default: Date.now
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
-  timestamps: true
+  timestamps: true,
+  strict: true // Sadece tanımlı alanları kabul et
 });
 
 // Şifre hashleme
@@ -45,6 +65,7 @@ userSchema.pre('save', async function(next) {
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    this.lastActive = new Date();
     next();
   } catch (error) {
     next(error as Error);
@@ -57,11 +78,7 @@ userSchema.methods.comparePassword = async function(candidatePassword: string) {
 };
 
 // Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ company: 1 });
-userSchema.index({ companyType: 1 });
-userSchema.index({ city: 1 });
-userSchema.index({ country: 1 });
+userSchema.index({ email: 1 }, { unique: true });
 
-export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema); 
+// Yeni model oluştur
+export const User = mongoose.model('User', userSchema); 

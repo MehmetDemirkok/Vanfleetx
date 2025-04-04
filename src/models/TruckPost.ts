@@ -54,6 +54,11 @@ const truckPostSchema = new mongoose.Schema({
   },
 });
 
+// Indexes for better query performance
+truckPostSchema.index({ userId: 1 });
+truckPostSchema.index({ status: 1 });
+truckPostSchema.index({ createdAt: -1 });
+
 const TruckPost = mongoose.models.TruckPost || mongoose.model('TruckPost', truckPostSchema);
 
 export default TruckPost; 

@@ -3,6 +3,9 @@
 import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import SummaryCards from '@/components/dashboard/SummaryCards';
+import DashboardCharts from '@/components/dashboard/DashboardCharts';
+import RecentActivities from '@/components/dashboard/RecentActivities';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -15,18 +18,30 @@ export default function DashboardPage() {
   }, [status, router]);
 
   if (status === 'loading') {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Hoş Geldiniz</h1>
-      
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Dashboard İçeriği</h2>
-        <p className="text-gray-500">
-          Hoş geldiniz! Bu dashboard üzerinden sisteminizi yönetebilirsiniz.
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Hoş geldiniz, {session?.user?.name}
         </p>
+      </div>
+
+      <SummaryCards />
+      
+      <DashboardCharts />
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4">
+          <RecentActivities />
+        </div>
       </div>
     </div>
   );

@@ -38,22 +38,65 @@ export default function NewTruckPostPage() {
 
     try {
       setIsSubmitting(true);
+
+      // Validate required fields
+      const requiredFields = ['title', 'currentLocation', 'destination', 'truckType', 'capacity', 'price', 'description', 'availableDate'] as const;
+      const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Lütfen tüm zorunlu alanları doldurun: ${missingFields.join(', ')}`);
+      }
+
+      // Validate numeric fields
+      if (isNaN(Number(formData.capacity)) || Number(formData.capacity) <= 0) {
+        throw new Error('Geçerli bir kapasite değeri giriniz');
+      }
+
+      if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+        throw new Error('Geçerli bir fiyat değeri giriniz');
+      }
+
+      // Validate date
+      const availableDate = new Date(formData.availableDate);
+      if (isNaN(availableDate.getTime())) {
+        throw new Error('Geçerli bir tarih seçiniz');
+      }
+
+      // Format the data according to the schema requirements
+      const submissionData = {
+        title: formData.title.trim(),
+        currentLocation: formData.currentLocation.trim(),
+        destination: formData.destination.trim(),
+        truckType: formData.truckType,
+        capacity: Number(formData.capacity),
+        price: Number(formData.price),
+        description: formData.description.trim(),
+        availableDate: availableDate.toISOString(),
+        status: 'active'
+      };
+
+      // Log the data being sent
+      console.log('Sending data:', submissionData);
+
       const response = await fetch('/api/truck-posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
-      if (response.ok) {
-        router.push('/truck-posts');
-      } else {
-        throw new Error('İlan oluşturulurken bir hata oluştu');
+      const data = await response.json();
+      console.log('Response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'İlan oluşturulurken bir hata oluştu');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('İlan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
+
+      router.push('/dashboard/truck-posts');
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      alert(error.message || 'İlan oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setIsSubmitting(false);
     }
