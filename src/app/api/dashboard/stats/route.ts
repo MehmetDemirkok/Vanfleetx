@@ -5,6 +5,9 @@ import { connectToDatabase } from '@/lib/db';
 import { CargoPost } from '@/lib/models/cargo-post.model';
 import { TruckPost } from '@/lib/models/truck-post.model';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

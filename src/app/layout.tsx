@@ -5,6 +5,7 @@ import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
 import Header from '@/components/Header';
 import { Toaster } from 'sonner';
+import { UserActivityTracker } from '@/components/user-activity-tracker';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
             {children}
           </main>
           <Toaster position="top-right" richColors />
+          <UserActivityTracker />
           <footer className="bg-white border-t border-gray-100">
             <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
               <p className="text-center text-sm text-gray-500">

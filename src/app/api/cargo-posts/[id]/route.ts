@@ -4,6 +4,9 @@ import { CargoPost } from '@/lib/models/cargo-post.model';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 interface RouteParams {
   params: {
     id: string;

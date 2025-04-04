@@ -5,6 +5,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { CargoPost } from '@/lib/models/cargo-post.model';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 interface ICargoPost {
   _id: mongoose.Types.ObjectId;
   userId: string;

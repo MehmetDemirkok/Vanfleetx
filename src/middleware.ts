@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { connectToDatabase } from '@/lib/db';
-import mongoose from 'mongoose';
 
 export const config = {
   matcher: [
@@ -17,14 +15,10 @@ export async function middleware(request: NextRequest) {
   try {
     const token = await getToken({ req: request });
     
-    if (token?.sub) { // Eğer kullanıcı oturum açmışsa
-      await connectToDatabase();
-      const User = mongoose.model('User');
-      
-      // Kullanıcının son aktif zamanını güncelle
-      await User.findByIdAndUpdate(token.sub, {
-        lastActive: new Date()
-      });
+    if (token?.sub) { // If user is logged in
+      // Instead of using Mongoose directly, we'll call our API endpoint
+      // This will be handled by the client-side code
+      // The middleware will just pass through
     }
   } catch (error) {
     console.error('Middleware error:', error);

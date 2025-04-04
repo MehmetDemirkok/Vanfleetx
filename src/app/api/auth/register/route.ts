@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { User } from '@/lib/models/user.model';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   try {
     // MongoDB bağlantısı

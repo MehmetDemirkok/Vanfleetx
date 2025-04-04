@@ -5,6 +5,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import TruckPost from '@/models/TruckPost';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 interface MongoTruckPost {
   _id: mongoose.Types.ObjectId;
   title: string;

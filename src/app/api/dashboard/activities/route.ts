@@ -6,6 +6,9 @@ import { CargoPost } from '@/lib/models/cargo-post.model';
 import { TruckPost } from '@/lib/models/truck-post.model';
 import { Document, Types } from 'mongoose';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 interface BaseDocument extends Document {
   _id: Types.ObjectId;
   status: string;

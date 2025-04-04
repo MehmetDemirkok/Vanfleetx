@@ -4,6 +4,9 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 
+// Explicitly set the runtime to Node.js
+export const runtime = 'nodejs';
+
 // Define the User type
 type User = {
   id: string;
