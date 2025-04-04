@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
@@ -8,6 +8,13 @@ import { Toaster } from 'sonner';
 import { UserActivityTracker } from '@/components/user-activity-tracker';
 
 const inter = Inter({ subsets: ['latin'] });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#4263eb',
+};
 
 export const metadata: Metadata = {
   title: {
@@ -46,12 +53,6 @@ export const metadata: Metadata = {
     email: true,
     url: true,
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
-  themeColor: '#4263eb',
 };
 
 export default function RootLayout({

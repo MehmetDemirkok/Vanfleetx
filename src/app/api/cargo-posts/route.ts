@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 
 interface ICargoPost {
   _id: mongoose.Types.ObjectId;
-  userId: string;
+  createdBy: mongoose.Types.ObjectId;
   loadingCity: string;
   unloadingCity: string;
   loadingDate: Date;
@@ -23,19 +23,18 @@ interface ICargoPost {
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    const CargoPost = mongoose.model<ICargoPost>('CargoPost');
 
     // Get userId from query parameters if provided
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
     // Build query based on whether userId is provided
-    const query = userId ? { userId } : {};
+    const query = userId ? { createdBy: userId } : {};
 
     // Get posts with optional filtering
     const posts = await CargoPost.find(query)
       .sort({ createdAt: -1 })
-      .lean();
+      .lean<ICargoPost[]>();
 
     return NextResponse.json(posts.map(post => ({
       ...post,
@@ -128,7 +127,6 @@ export async function POST(request: NextRequest) {
       price: Number(body.price),
       palletCount: body.palletCount ? Number(body.palletCount) : undefined,
       palletType: body.palletType,
-      userId: session.user.id,
       createdBy: session.user.id,
       status: 'active'
     });

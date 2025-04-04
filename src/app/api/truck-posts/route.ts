@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db';
 import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import TruckPost from '@/models/TruckPost';
+import { TruckPost } from '@/lib/models/truck-post.model';
 
 // Explicitly set the runtime to Node.js
 export const runtime = 'nodejs';
@@ -19,7 +19,7 @@ interface MongoTruckPost {
   description: string;
   availableDate: Date;
   status: string;
-  userId: string;
+  createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     await connectToDatabase();
 
     // Her kullanıcı sadece kendi ilanlarını görebilir
-    const query = { userId: session.user.id };
+    const query = { createdBy: session.user.id };
 
     const posts = await TruckPost.find(query)
       .sort({ createdAt: -1 })
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       description: post.description,
       availableDate: post.availableDate.toISOString(),
       status: post.status,
-      userId: post.userId,
+      createdBy: post.createdBy.toString(),
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString()
     }));
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       price: body.price,
       description: body.description.trim(),
       availableDate: availableDate,
-      userId: session.user.id,
+      createdBy: session.user.id,
       status: 'active'
     });
     

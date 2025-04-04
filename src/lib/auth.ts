@@ -1,7 +1,8 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/dbConnect';
-import User from '@/models/User';
+import { User } from '@/lib/models/user.model';
+import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,7 +26,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Email veya şifre hatalı');
           }
 
-          const isPasswordValid = await user.comparePassword(credentials.password);
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
           if (!isPasswordValid) {
             throw new Error('Email veya şifre hatalı');

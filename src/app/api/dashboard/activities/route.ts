@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
-import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { Activity } from '@/lib/models/activity.model';
+import { User } from '@/lib/models/user.model';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,14 +18,11 @@ export async function GET() {
 
     await connectToDatabase();
 
-    const User = mongoose.model('User');
     const currentUser = await User.findById(session.user.id);
 
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-
-    const Activity = mongoose.model('Activity');
 
     // Kullanıcı rolüne göre filtreleme koşulları
     const userFilter = currentUser.role === 'admin' ? {} : { userId: currentUser._id };

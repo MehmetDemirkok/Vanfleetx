@@ -25,7 +25,6 @@ interface PopulatedCargoPost {
   vehicleType: string;
   description?: string;
   status: 'active' | 'inactive' | 'completed' | 'cancelled';
-  userId: Types.ObjectId;
   createdBy: {
     _id: Types.ObjectId;
     name: string;

@@ -1,8 +1,6 @@
-import { IUser } from '@/models/User';
-import { ICargoPost } from '@/models/CargoPost';
-import { ICompany } from '@/models/Company';
-import { IEmptyTruckPost } from '@/models/EmptyTruckPost';
-import { IBid } from '@/models/Bid';
-import { IChat, IMessage } from '@/models/Chat';
+import { IUser } from '@/lib/models/user.model';
+import { CargoPost } from '@/lib/models/cargo-post.model';
+import { TruckPost } from '@/lib/models/truck-post.model';
+import { Activity } from '@/lib/models/activity.model';
 
-export type { IUser, ICargoPost, ICompany, IEmptyTruckPost, IBid, IChat, IMessage }; 
+export type { IUser, CargoPost, TruckPost, Activity }; 

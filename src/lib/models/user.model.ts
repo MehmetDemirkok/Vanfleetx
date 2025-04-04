@@ -1,6 +1,24 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+// Interface for User document
+export interface IUser extends mongoose.Document {
+  name: string;
+  email: string;
+  password: string;
+  company: string;
+  companyType: string;
+  phone: string;
+  address: string;
+  city: string;
+  country: string;
+  role: 'user' | 'admin';
+  lastActive: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
 // Mevcut modeli kaldır
 if (mongoose.models.User) {
   delete mongoose.models.User;
@@ -96,9 +114,6 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.comparePassword = async function(candidatePassword: string) {
   return bcrypt.compare(candidatePassword, this.password);
 };
-
-// Indexes
-userSchema.index({ email: 1 }, { unique: true });
 
 // Yeni model oluştur
 export const User = mongoose.model('User', userSchema); 

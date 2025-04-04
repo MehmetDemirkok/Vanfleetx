@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/db';
-import mongoose from 'mongoose';
+import { TruckPost } from '@/lib/models/truck-post.model';
 
 // Explicitly set the runtime to Node.js
 export const runtime = 'nodejs';
@@ -19,7 +19,6 @@ export async function GET(
     }
 
     await connectToDatabase();
-    const TruckPost = mongoose.model('TruckPost');
 
     const post = await TruckPost.findById(params.id);
 
@@ -28,7 +27,7 @@ export async function GET(
     }
 
     // Check if user has permission to view this post
-    if (session.user.role !== 'ADMIN' && post.userId !== session.user.id) {
+    if (session.user.role !== 'admin' && post.createdBy.toString() !== session.user.id) {
       return NextResponse.json({ error: 'Bu ilana erişim izniniz yok' }, { status: 403 });
     }
 
@@ -57,7 +56,6 @@ export async function PUT(
 
     const body = await request.json();
     await connectToDatabase();
-    const TruckPost = mongoose.model('TruckPost');
 
     const post = await TruckPost.findById(params.id);
 
@@ -66,7 +64,7 @@ export async function PUT(
     }
 
     // Check if user has permission to edit this post
-    if (session.user.role !== 'ADMIN' && post.userId !== session.user.id) {
+    if (session.user.role !== 'admin' && post.createdBy.toString() !== session.user.id) {
       return NextResponse.json({ error: 'Bu ilanı düzenleme izniniz yok' }, { status: 403 });
     }
 
@@ -100,7 +98,6 @@ export async function DELETE(
     }
 
     await connectToDatabase();
-    const TruckPost = mongoose.model('TruckPost');
 
     const post = await TruckPost.findById(params.id);
 
@@ -109,7 +106,7 @@ export async function DELETE(
     }
 
     // Check if user has permission to delete this post
-    if (session.user.role !== 'ADMIN' && post.userId !== session.user.id) {
+    if (session.user.role !== 'admin' && post.createdBy.toString() !== session.user.id) {
       return NextResponse.json({ error: 'Bu ilanı silme izniniz yok' }, { status: 403 });
     }
 
