@@ -158,7 +158,7 @@ function CargoPostsContent() {
                     Güzergah
                   </th>
                   <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tarihler
+                    Yükleme Tarihi
                   </th>
                   <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Araç Tipi
@@ -184,8 +184,9 @@ function CargoPostsContent() {
                       </div>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="text-xs text-gray-900">
-                        {new Date(post.loadingDate).toLocaleDateString('tr-TR')} - {new Date(post.unloadingDate).toLocaleDateString('tr-TR')}
+                      <div className="flex items-center text-xs">
+                        <CalendarIcon className="h-4 w-4 text-green-500 mr-1" />
+                        <span className="text-gray-900">{new Date(post.loadingDate).toLocaleDateString('tr-TR')}</span>
                       </div>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
