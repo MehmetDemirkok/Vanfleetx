@@ -29,13 +29,14 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     await connectToDatabase();
 
-    // Get userId from query parameters if provided
+    // Get query parameters
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const isPublicPage = searchParams.get('public') === 'true';
 
-    // If userId is provided or user is authenticated, show only their posts
-    if (userId || session) {
-      const query = { createdBy: userId || session?.user?.id };
+    // Dashboard için: Kullanıcının kendi ilanlarını getir
+    if (userId) {
+      const query = { createdBy: userId };
       const posts = await TruckPost.find(query)
         .sort({ createdAt: -1 })
         .lean() as unknown as MongoTruckPost[];
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(formattedPosts);
     }
 
-    // For public access, show all active posts
+    // Public sayfa için: Tüm aktif ilanları getir
     const posts = await TruckPost.find({ status: 'active' })
       .sort({ createdAt: -1 })
       .lean() as unknown as MongoTruckPost[];

@@ -79,7 +79,10 @@ function TruckPostsContent() {
     try {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/api/truck-posts${searchParams ? `?${searchParams.toString()}` : ''}`, {
+      const queryParams = new URLSearchParams(searchParams?.toString() || '');
+      queryParams.set('public', 'true');
+      
+      const res = await fetch(`${baseUrl}/api/truck-posts?${queryParams.toString()}`, {
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
