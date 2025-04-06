@@ -27,17 +27,40 @@ interface MongoTruckPost {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await connectToDatabase();
 
-    // Her kullanıcı sadece kendi ilanlarını görebilir
-    const query = { createdBy: session.user.id };
+    // Get userId from query parameters if provided
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
 
-    const posts = await TruckPost.find(query)
+    // If userId is provided or user is authenticated, show only their posts
+    if (userId || session) {
+      const query = { createdBy: userId || session?.user?.id };
+      const posts = await TruckPost.find(query)
+        .sort({ createdAt: -1 })
+        .lean() as unknown as MongoTruckPost[];
+
+      const formattedPosts = posts.map(post => ({
+        _id: post._id.toString(),
+        title: post.title,
+        currentLocation: post.currentLocation,
+        destination: post.destination,
+        truckType: post.truckType,
+        capacity: post.capacity,
+        price: post.price,
+        description: post.description,
+        availableDate: post.availableDate.toISOString(),
+        status: post.status,
+        createdBy: post.createdBy.toString(),
+        createdAt: post.createdAt.toISOString(),
+        updatedAt: post.updatedAt.toISOString()
+      }));
+
+      return NextResponse.json(formattedPosts);
+    }
+
+    // For public access, show all active posts
+    const posts = await TruckPost.find({ status: 'active' })
       .sort({ createdAt: -1 })
       .lean() as unknown as MongoTruckPost[];
 

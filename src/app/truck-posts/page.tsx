@@ -80,7 +80,10 @@ function TruckPostsContent() {
       setLoading(true);
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const res = await fetch(`${baseUrl}/api/truck-posts${searchParams ? `?${searchParams.toString()}` : ''}`, {
-        cache: 'no-store'
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
         
       if (!res.ok) {
