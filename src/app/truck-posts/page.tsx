@@ -32,7 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   InformationCircleIcon, 
   ArrowPathIcon,
-  ArrowLongRightIcon 
+  ArrowLongRightIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
 import { Modal } from '@/components/ui/Modal';
@@ -546,24 +547,51 @@ function TruckPostsContent() {
         title="İletişim Bilgileri"
       >
         {selectedPost && (
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500">İlan Sahibi</h4>
-              <p className="mt-1 text-sm text-gray-900">
-                {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
-              </p>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">İlan Sahibi</h4>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-900 font-medium">
+                  {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
+                </p>
+                <div className="flex items-center text-sm text-gray-600">
+                  <EnvelopeIcon className="h-4 w-4 mr-2" />
+                  <span>{selectedPost.createdBy?.email || 'E-posta Belirtilmemiş'}</span>
+                </div>
+                {selectedPost.createdBy?.phone && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <PhoneIcon className="h-4 w-4 mr-2" />
+                    <span>{selectedPost.createdBy.phone}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500">E-posta</h4>
-              <p className="mt-1 text-sm text-gray-900">
-                {selectedPost.createdBy?.email || 'E-posta Belirtilmemiş'}
-              </p>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">İlan Bilgileri</h4>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Araç Tipi:</span> {selectedPost.truckType}
+                </p>
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Kapasite:</span> {selectedPost.capacity} ton
+                </p>
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Konum:</span> {selectedPost.currentLocation}
+                </p>
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Hedef:</span> {selectedPost.destination}
+                </p>
+                {selectedPost.price && (
+                  <p className="text-sm text-gray-900">
+                    <span className="font-medium">Fiyat:</span> {selectedPost.price} ₺
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500">Telefon</h4>
-              <p className="mt-1 text-sm text-gray-900">
-                {selectedPost.createdBy?.phone || 'Telefon Belirtilmemiş'}
-              </p>
+
+            <div className="text-xs text-gray-500 text-center">
+              <p>İlan Tarihi: {new Date(selectedPost.createdAt).toLocaleDateString('tr-TR')}</p>
             </div>
           </div>
         )}

@@ -24,21 +24,39 @@ export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Get userId from query parameters if provided
+    // Get query parameters
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const publicOnly = searchParams.get('public') === 'true';
 
-    // Build query based on whether userId is provided
-    const query = userId ? { createdBy: userId } : {};
+    // Build query
+    const query: any = {};
+    if (userId) {
+      query.createdBy = userId;
+    }
+    if (publicOnly) {
+      query.status = 'active';
+    }
 
-    // Get posts with optional filtering
+    // Get posts with populated creator information
     const posts = await CargoPost.find(query)
+      .populate({
+        path: 'createdBy',
+        select: 'name email phone',
+        model: 'User'
+      })
       .sort({ createdAt: -1 })
-      .lean<ICargoPost[]>();
+      .lean();
 
     return NextResponse.json(posts.map(post => ({
       ...post,
       _id: post._id.toString(),
+      createdBy: post.createdBy ? {
+        _id: post.createdBy._id.toString(),
+        name: post.createdBy.name,
+        email: post.createdBy.email,
+        phone: post.createdBy.phone
+      } : null,
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString()
     })));
@@ -51,69 +69,29 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    console.log('Received body:', body);
 
     // Validate required fields
-    const requiredFields = [
-      'title',
-      'loadingCity',
-      'loadingAddress',
-      'unloadingCity',
-      'unloadingAddress',
-      'loadingDate',
-      'cargoType',
-      'weight',
-      'volume',
-      'price'
-    ];
-
-    const missingFields = requiredFields.filter(field => !body[field]);
-    if (missingFields.length > 0) {
-      console.log('Missing fields:', missingFields);
+    if (!body.loadingCity || !body.unloadingCity || !body.loadingDate) {
       return NextResponse.json({ 
-        error: `Eksik alanlar: ${missingFields.join(', ')}` 
+        error: 'Eksik bilgi: Yükleme şehri, boşaltma şehri ve yükleme tarihi zorunludur' 
       }, { status: 400 });
     }
 
-    // Validate data types
-    if (isNaN(Number(body.weight)) || Number(body.weight) <= 0) {
-      return NextResponse.json({ 
-        error: 'Geçerli bir ağırlık değeri giriniz' 
-      }, { status: 400 });
-    }
-
-    if (isNaN(Number(body.volume)) || Number(body.volume) <= 0) {
-      return NextResponse.json({ 
-        error: 'Geçerli bir hacim değeri giriniz' 
-      }, { status: 400 });
-    }
-
-    if (isNaN(Number(body.price)) || Number(body.price) <= 0) {
-      return NextResponse.json({ 
-        error: 'Geçerli bir fiyat değeri giriniz' 
-      }, { status: 400 });
-    }
-
-    // Validate dates
+    // Parse dates
     const loadingDate = new Date(body.loadingDate);
     if (isNaN(loadingDate.getTime())) {
       return NextResponse.json({ 
-        error: 'Geçerli bir yükleme tarihi giriniz' 
+        error: 'Geçersiz yükleme tarihi' 
       }, { status: 400 });
     }
 
-    // Connect to database
-    await connectToDatabase();
-
     // Create new post
     const newPost = new CargoPost({
-      title: body.title,
       loadingCity: body.loadingCity,
       loadingAddress: body.loadingAddress,
       unloadingCity: body.unloadingCity,
@@ -131,15 +109,28 @@ export async function POST(request: NextRequest) {
       status: 'active'
     });
 
-    console.log('Saving post:', newPost);
     const savedPost = await newPost.save();
-    console.log('Post saved:', savedPost);
+
+    // Populate creator information
+    const populatedPost = await CargoPost.findById(savedPost._id)
+      .populate({
+        path: 'createdBy',
+        select: 'name email phone',
+        model: 'User'
+      })
+      .lean();
 
     return NextResponse.json({
-      ...savedPost.toObject(),
-      _id: savedPost._id.toString(),
-      createdAt: savedPost.createdAt.toISOString(),
-      updatedAt: savedPost.updatedAt.toISOString()
+      ...populatedPost,
+      _id: populatedPost._id.toString(),
+      createdBy: populatedPost.createdBy ? {
+        _id: populatedPost.createdBy._id.toString(),
+        name: populatedPost.createdBy.name,
+        email: populatedPost.createdBy.email,
+        phone: populatedPost.createdBy.phone
+      } : null,
+      createdAt: populatedPost.createdAt.toISOString(),
+      updatedAt: populatedPost.updatedAt.toISOString()
     });
   } catch (error: any) {
     console.error('Cargo Post Creation Error:', {

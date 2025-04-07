@@ -26,44 +26,31 @@ interface MongoTruckPost {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
     await connectToDatabase();
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const isPublicPage = searchParams.get('public') === 'true';
+    const publicOnly = searchParams.get('public') === 'true';
 
-    // Dashboard için: Kullanıcının kendi ilanlarını getir
+    // Build query
+    const query: any = {};
     if (userId) {
-      const query = { createdBy: userId };
-      const posts = await TruckPost.find(query)
-        .sort({ createdAt: -1 })
-        .lean() as unknown as MongoTruckPost[];
-
-      const formattedPosts = posts.map(post => ({
-        _id: post._id.toString(),
-        title: post.title,
-        currentLocation: post.currentLocation,
-        destination: post.destination,
-        truckType: post.truckType,
-        capacity: post.capacity,
-        price: post.price,
-        description: post.description,
-        availableDate: post.availableDate.toISOString(),
-        status: post.status,
-        createdBy: post.createdBy.toString(),
-        createdAt: post.createdAt.toISOString(),
-        updatedAt: post.updatedAt.toISOString()
-      }));
-
-      return NextResponse.json(formattedPosts);
+      query.createdBy = userId;
+    }
+    if (publicOnly) {
+      query.status = 'active';
     }
 
-    // Public sayfa için: Tüm aktif ilanları getir
-    const posts = await TruckPost.find({ status: 'active' })
+    // Get posts with populated creator information
+    const posts = await TruckPost.find(query)
+      .populate({
+        path: 'createdBy',
+        select: 'name email phone',
+        model: 'User'
+      })
       .sort({ createdAt: -1 })
-      .lean() as unknown as MongoTruckPost[];
+      .lean();
 
     const formattedPosts = posts.map(post => ({
       _id: post._id.toString(),
@@ -76,7 +63,12 @@ export async function GET(request: NextRequest) {
       description: post.description,
       availableDate: post.availableDate.toISOString(),
       status: post.status,
-      createdBy: post.createdBy.toString(),
+      createdBy: post.createdBy ? {
+        _id: post.createdBy._id.toString(),
+        name: post.createdBy.name,
+        email: post.createdBy.email,
+        phone: post.createdBy.phone
+      } : null,
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString()
     }));

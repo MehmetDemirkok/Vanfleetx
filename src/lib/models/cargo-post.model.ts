@@ -14,7 +14,6 @@ const cargoPostSchema = new mongoose.Schema({
     enum: ['active', 'inactive', 'completed', 'cancelled'], 
     default: 'active' 
   },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdBy: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User',
@@ -32,8 +31,9 @@ const cargoPostSchema = new mongoose.Schema({
 // Indexes
 cargoPostSchema.index({ loadingCity: 1 });
 cargoPostSchema.index({ unloadingCity: 1 });
-cargoPostSchema.index({ loadingDate: 1 });
+cargoPostSchema.index({ vehicleType: 1 });
 cargoPostSchema.index({ status: 1 });
 cargoPostSchema.index({ createdBy: 1 });
+cargoPostSchema.index({ createdAt: -1 });
 
 export const CargoPost = mongoose.models.CargoPost || mongoose.model('CargoPost', cargoPostSchema); 

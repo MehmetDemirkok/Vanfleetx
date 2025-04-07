@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { MapPinIcon, TruckIcon, CalendarIcon, PhoneIcon, InformationCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, TruckIcon, CalendarIcon, PhoneIcon, InformationCircleIcon, MagnifyingGlassIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { Modal } from '@/components/ui/Modal';
 
@@ -24,6 +24,7 @@ interface CargoPost {
     email: string;
     phone?: string;
   };
+  createdAt: string;
 }
 
 function CargoPostsContent() {
@@ -303,21 +304,59 @@ function CargoPostsContent() {
         title="İletişim Bilgileri"
       >
         {selectedPost && (
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-500">İlan Sahibi</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.name}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500">E-posta</h4>
-              <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.email}</p>
-            </div>
-            {selectedPost.createdBy.phone && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Telefon</h4>
-                <p className="mt-1 text-sm text-gray-900">{selectedPost.createdBy.phone}</p>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">İlan Sahibi</h4>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-900 font-medium">
+                  {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
+                </p>
+                <div className="flex items-center text-sm text-gray-600">
+                  <EnvelopeIcon className="h-4 w-4 mr-2" />
+                  <span>{selectedPost.createdBy?.email || 'E-posta Belirtilmemiş'}</span>
+                </div>
+                {selectedPost.createdBy?.phone && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <PhoneIcon className="h-4 w-4 mr-2" />
+                    <span>{selectedPost.createdBy.phone}</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">İlan Bilgileri</h4>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Araç Tipi:</span> {selectedPost.vehicleType}
+                </p>
+                {selectedPost.weight && (
+                  <p className="text-sm text-gray-900">
+                    <span className="font-medium">Ağırlık:</span> {selectedPost.weight} kg
+                  </p>
+                )}
+                {selectedPost.volume && (
+                  <p className="text-sm text-gray-900">
+                    <span className="font-medium">Hacim:</span> {selectedPost.volume} m³
+                  </p>
+                )}
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Yükleme:</span> {selectedPost.loadingCity}
+                </p>
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">Boşaltma:</span> {selectedPost.unloadingCity}
+                </p>
+                {selectedPost.price && (
+                  <p className="text-sm text-gray-900">
+                    <span className="font-medium">Fiyat:</span> {selectedPost.price} ₺
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 text-center">
+              <p>İlan Tarihi: {new Date(selectedPost.createdAt).toLocaleDateString('tr-TR')}</p>
+            </div>
           </div>
         )}
       </Modal>
