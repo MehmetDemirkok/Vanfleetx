@@ -28,27 +28,25 @@ export async function GET() {
     // Kullanıcı rolüne göre filtreleme koşulları
     const userFilter = currentUser.role === 'admin' ? {} : { createdBy: currentUser._id };
 
-    // Toplam yük ilanı sayısı
-    const totalCargoPosts = await CargoPost.countDocuments(userFilter);
-    
-    // Toplam araç ilanı sayısı
-    const totalTruckPosts = await TruckPost.countDocuments(userFilter);
-    
-    // Tamamlanan taşımalar (status: 'completed')
-    const completedShipments = await CargoPost.countDocuments({ 
+    // Toplam yük ilanı sayısı (completed hariç)
+    const totalCargoPosts = await CargoPost.countDocuments({
       ...userFilter,
-      status: 'completed' 
-    }) + await TruckPost.countDocuments({ 
-      ...userFilter,
-      status: 'completed' 
+      status: { $ne: 'completed' }
     });
     
-    // Aktif kullanıcı sayısı (son 5 dakika içinde aktif olanlar)
-    const activeUsers = currentUser.role === 'admin' 
-      ? await User.countDocuments({ 
-          lastActive: { $gte: new Date(Date.now() - 5 * 60 * 1000) } 
-        })
-      : 1; // Normal kullanıcılar sadece kendilerini görür
+    // Toplam araç ilanı sayısı (completed hariç)
+    const totalTruckPosts = await TruckPost.countDocuments({
+      ...userFilter,
+      status: { $ne: 'completed' }
+    });
+    
+    // Tamamlanan taşımalar artık gösterilmeyecek
+    const completedShipments = 0;
+    
+    // Aktif kullanıcı sayısı (son 15 dakika içinde aktif olanlar)
+    const activeUsers = await User.countDocuments({ 
+      lastActive: { $gte: new Date(Date.now() - 15 * 60 * 1000) }
+    });
     
     // Son aktiviteler
     const activityFilter = currentUser.role === 'admin' 
@@ -69,7 +67,8 @@ export async function GET() {
       {
         $match: {
           ...userFilter,
-          createdAt: { $gte: sixMonthsAgo }
+          createdAt: { $gte: sixMonthsAgo },
+          status: { $ne: 'completed' }
         }
       },
       {
@@ -90,7 +89,8 @@ export async function GET() {
       {
         $match: {
           ...userFilter,
-          createdAt: { $gte: sixMonthsAgo }
+          createdAt: { $gte: sixMonthsAgo },
+          status: { $ne: 'completed' }
         }
       },
       {

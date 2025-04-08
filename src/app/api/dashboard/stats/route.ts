@@ -40,20 +40,16 @@ export async function GET() {
       status: 'active' 
     });
 
-    // Tamamlanan ilanlar
-    const completedCargoPosts = await CargoPost.countDocuments({ 
+    // Toplam ilanlar (completed hariç)
+    const totalCargoPosts = await CargoPost.countDocuments({
       ...userFilter,
-      status: 'completed' 
+      status: { $ne: 'completed' }
     });
     
-    const completedTruckPosts = await TruckPost.countDocuments({ 
+    const totalTruckPosts = await TruckPost.countDocuments({
       ...userFilter,
-      status: 'completed' 
+      status: { $ne: 'completed' }
     });
-
-    // Toplam ilanlar
-    const totalCargoPosts = await CargoPost.countDocuments(userFilter);
-    const totalTruckPosts = await TruckPost.countDocuments(userFilter);
 
     // Okunmamış mesajlar (şimdilik 0 olarak ayarlandı)
     const unreadMessages = 0;
@@ -61,8 +57,6 @@ export async function GET() {
     return NextResponse.json({
       activeCargoPosts,
       activeTruckPosts,
-      completedCargoPosts,
-      completedTruckPosts,
       totalCargoPosts,
       totalTruckPosts,
       unreadMessages

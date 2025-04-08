@@ -1,8 +1,10 @@
-import type { NextAuthOptions } from 'next-auth';
+import type { NextAuthOptions, Session } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/lib/models/user.model';
 import bcrypt from 'bcryptjs';
+import { logActivity, ActivityMessages } from '@/lib/utils/activity';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -32,6 +34,14 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Email veya şifre hatalı');
           }
 
+          // Kullanıcı girişi başarılı, aktivite logla
+          await logActivity({
+            userId: user._id.toString(),
+            userName: user.name,
+            action: ActivityMessages.user.login,
+            type: 'kullanici'
+          });
+
           return {
             id: user._id.toString(),
             email: user.email,
@@ -45,29 +55,43 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 gün
-  },
-  pages: {
-    signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error',
-  },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
       }
       return session;
-    },
+    }
+  },
+  events: {
+    async signOut({ token }: { token: JWT }) {
+      try {
+        await logActivity({
+          userId: token.id as string,
+          userName: token.name as string,
+          action: ActivityMessages.user.logout,
+          type: 'kullanici'
+        });
+      } catch (error) {
+        console.error('Error logging signout activity:', error);
+      }
+    }
+  },
+  pages: {
+    signIn: '/auth/signin',
+    signOut: '/auth/signout',
+    error: '/auth/error',
+  },
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 gün
   },
 }; 

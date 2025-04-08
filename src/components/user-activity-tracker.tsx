@@ -26,8 +26,8 @@ export function UserActivityTracker() {
     // Update activity when component mounts
     updateUserActivity();
 
-    // Set up interval to update activity every 5 minutes
-    const intervalId = setInterval(updateUserActivity, 5 * 60 * 1000);
+    // Set up interval to update activity every 15 minutes
+    const intervalId = setInterval(updateUserActivity, 15 * 60 * 1000);
 
     // Clean up interval on unmount
     return () => clearInterval(intervalId);

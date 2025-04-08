@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Truck, CheckCircle, User } from 'lucide-react';
@@ -30,17 +32,18 @@ const getIcon = (type: Activity['type']) => {
 const formatTimestamp = (timestamp: string) => {
   const date = new Date(timestamp);
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
   
-  if (diffInSeconds < 60) {
-    return 'Az önce';
-  } else if (diffInSeconds < 3600) {
-    return `${Math.floor(diffInSeconds / 60)} dakika önce`;
-  } else if (diffInSeconds < 86400) {
-    return `${Math.floor(diffInSeconds / 3600)} saat önce`;
-  } else {
-    return `${Math.floor(diffInSeconds / 86400)} gün önce`;
-  }
+  if (diffInMinutes < 1) return 'Az önce';
+  if (diffInMinutes < 60) return `${diffInMinutes} dakika önce`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} saat önce`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} gün önce`;
+  
+  return date.toLocaleDateString('tr-TR');
 };
 
 export default function RecentActivities() {
@@ -50,7 +53,7 @@ export default function RecentActivities() {
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        const response = await fetch('/api/activities');
+        const response = await fetch('/api/dashboard/activities');
         if (response.ok) {
           const data = await response.json();
           setActivities(data);
@@ -63,6 +66,10 @@ export default function RecentActivities() {
     };
 
     fetchActivities();
+    // Her 30 saniyede bir güncelle
+    const intervalId = setInterval(fetchActivities, 30 * 1000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
@@ -73,7 +80,7 @@ export default function RecentActivities() {
       <CardContent>
         {loading ? (
           <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center space-x-4">
                 <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
                 <div className="flex-1 space-y-1">

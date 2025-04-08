@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AtSymbolIcon, LockClosedIcon, BuildingOfficeIcon, GlobeAltIcon, UserIcon } from '@heroicons/react/24/outline';
+import { AtSymbolIcon, LockClosedIcon, BuildingOfficeIcon, GlobeAltIcon, UserIcon, PhoneIcon, MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 
 export default function SignUp() {
   const router = useRouter();
@@ -12,6 +12,10 @@ export default function SignUp() {
     email: '',
     password: '',
     companyName: '',
+    companyType: '',
+    phone: '',
+    address: '',
+    city: '',
     country: '',
     acceptTerms: false,
   });
@@ -30,7 +34,7 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -39,7 +43,7 @@ export default function SignUp() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Kayıt olurken bir hata oluştu');
+        throw new Error(data.error || 'Kayıt olurken bir hata oluştu');
       }
 
       router.push('/auth/signin?registered=true');
@@ -50,11 +54,11 @@ export default function SignUp() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
@@ -174,6 +178,81 @@ export default function SignUp() {
                   className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
                   placeholder="Şirket Adı"
                   value={formData.companyName}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="companyType"
+                  name="companyType"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  value={formData.companyType}
+                  onChange={handleChange}
+                >
+                  <option value="">Şirket Türü Seçin</option>
+                  <option value="lojistik">Lojistik Firması</option>
+                  <option value="nakliye">Nakliye Firması</option>
+                  <option value="diger">Diğer</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <PhoneIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Telefon Numarası"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MapPinIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="address"
+                  name="address"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Adres"
+                  value={formData.address}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BuildingLibraryIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  required
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-[#4263eb] focus:border-[#4263eb] sm:text-sm"
+                  placeholder="Şehir"
+                  value={formData.city}
                   onChange={handleChange}
                 />
               </div>

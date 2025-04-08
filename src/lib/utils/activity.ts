@@ -34,4 +34,25 @@ export async function logActivity({
     console.error('Activity logging error:', error);
     throw error;
   }
-} 
+}
+
+// Örnek aktivite mesajları
+export const ActivityMessages = {
+  cargo: {
+    created: 'yeni bir yük ilanı oluşturdu',
+    updated: 'yük ilanını güncelledi',
+    deleted: 'yük ilanını sildi',
+    completed: 'yük taşımasını tamamladı'
+  },
+  truck: {
+    created: 'yeni bir araç ilanı oluşturdu',
+    updated: 'araç ilanını güncelledi',
+    deleted: 'araç ilanını sildi',
+    completed: 'araç taşımasını tamamladı'
+  },
+  user: {
+    login: 'sisteme giriş yaptı',
+    logout: 'sistemden çıkış yaptı',
+    updated: 'profilini güncelledi'
+  }
+}; 

@@ -62,6 +62,20 @@ interface TruckPost {
 type SortField = 'date' | 'route' | 'status';
 type SortOrder = 'asc' | 'desc';
 
+const maskName = (name: string | undefined): string => {
+  if (!name) return 'İsim Belirtilmemiş';
+  const nameParts = name.split(' ');
+  if (nameParts.length < 2) return `${name.substring(0, 2)}${'*'.repeat(name.length - 2)}`;
+  
+  const firstName = nameParts[0];
+  const lastName = nameParts[nameParts.length - 1];
+  
+  const maskedFirstName = `${firstName.substring(0, 2)}${'*'.repeat(firstName.length - 2)}`;
+  const maskedLastName = `${lastName.substring(0, 2)}${'*'.repeat(lastName.length - 2)}`;
+  
+  return `${maskedFirstName} ${maskedLastName}`;
+};
+
 function TruckPostsContent() {
   const [posts, setPosts] = useState<TruckPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -428,7 +442,7 @@ function TruckPostsContent() {
                     </TableCell>
                     <TableCell className="px-4 py-2 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="text-xs text-gray-900">{post.createdBy?.name || 'İsim Belirtilmemiş'}</div>
+                        <div className="text-xs text-gray-900">{maskName(post.createdBy?.name)}</div>
                       </div>
                     </TableCell>
                     <TableCell className="px-4 py-2 whitespace-nowrap">
@@ -502,7 +516,7 @@ function TruckPostsContent() {
               <div>
                 <h4 className="text-sm font-medium text-gray-500">İlan Sahibi</h4>
                 <p className="mt-1 text-sm text-gray-900">
-                  {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
+                  {maskName(selectedPost.createdBy?.name)}
                 </p>
               </div>
               <div>
@@ -552,7 +566,7 @@ function TruckPostsContent() {
               <h4 className="text-sm font-medium text-gray-500 mb-2">İlan Sahibi</h4>
               <div className="space-y-2">
                 <p className="text-sm text-gray-900 font-medium">
-                  {selectedPost.createdBy?.name || 'İsim Belirtilmemiş'}
+                  {maskName(selectedPost.createdBy?.name)}
                 </p>
                 <div className="flex items-center text-sm text-gray-600">
                   <EnvelopeIcon className="h-4 w-4 mr-2" />

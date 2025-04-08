@@ -61,6 +61,10 @@ export default function SummaryCards() {
     };
 
     fetchSummary();
+    // Her 1 dakikada bir güncelle
+    const intervalId = setInterval(fetchSummary, 60 * 1000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const isAdmin = data?.userRole === 'admin';
@@ -82,29 +86,12 @@ export default function SummaryCards() {
         loading={loading}
       />
       <SummaryCard
-        title={isAdmin ? "Tamamlanan Taşımalar" : "Tamamlanan Taşımalarım"}
-        value={data?.summary.completedShipments || 0}
-        icon={<CheckCircle className="h-4 w-4" />}
-        description={isAdmin ? "Tüm tamamlanan işler" : "Tamamladığınız işler"}
+        title="Aktif Kullanıcılar"
+        value={data?.summary.activeUsers || 0}
+        icon={<Users className="h-4 w-4" />}
+        description={isAdmin ? "Sistemdeki tüm aktif kullanıcılar" : "Şu an aktif olan kullanıcılar"}
         loading={loading}
       />
-      {isAdmin ? (
-        <SummaryCard
-          title="Aktif Kullanıcılar"
-          value={data?.summary.activeUsers || 0}
-          icon={<Users className="h-4 w-4" />}
-          description="Şu an aktif olan kullanıcılar"
-          loading={loading}
-        />
-      ) : (
-        <SummaryCard
-          title="Hesap Durumu"
-          value={1}
-          icon={<Users className="h-4 w-4" />}
-          description="Aktif hesap"
-          loading={loading}
-        />
-      )}
     </div>
   );
 } 
