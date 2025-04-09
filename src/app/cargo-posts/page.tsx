@@ -27,6 +27,12 @@ interface CargoPost {
   createdAt: string;
 }
 
+// Format price with decimal places and TL symbol
+const formatPrice = (price: number | undefined): string => {
+  if (!price) return '-';
+  return `${price.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
+};
+
 function CargoPostsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -208,7 +214,7 @@ function CargoPostsContent() {
                       </span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">
-                      {post.price ? `${post.price} ₺` : '-'}
+                      <span>{formatPrice(post.price)}</span>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-right text-xs font-medium">
                       <div className="flex justify-end space-x-1">
@@ -265,7 +271,7 @@ function CargoPostsContent() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Fiyat</h4>
                   <p className="mt-1 text-sm text-gray-900">
-                    {selectedPost.price} ₺
+                    {formatPrice(selectedPost.price)}
                   </p>
                 </div>
               )}
@@ -348,7 +354,7 @@ function CargoPostsContent() {
                 </p>
                 {selectedPost.price && (
                   <p className="text-sm text-gray-900">
-                    <span className="font-medium">Fiyat:</span> {selectedPost.price} ₺
+                    <span className="font-medium">Fiyat:</span> {formatPrice(selectedPost.price)}
                   </p>
                 )}
               </div>
