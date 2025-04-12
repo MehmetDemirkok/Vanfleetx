@@ -8,21 +8,33 @@ import { TruckPost } from '@/lib/models/truck-post.model';
 // Explicitly set the runtime to Node.js
 export const runtime = 'nodejs';
 
-interface MongoTruckPost {
-  _id: mongoose.Types.ObjectId;
+interface IUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface ITruckPost {
+  _id: string;
   title: string;
   currentLocation: string;
   destination: string;
-  truckType: string;
+  truckType: 'tir' | 'kamyon' | 'kamyonet' | 'van' | 'pickup';
   capacity: number;
   price: number;
   description: string;
   availableDate: Date;
-  status: string;
-  createdBy: mongoose.Types.ObjectId;
+  status: 'active' | 'inactive' | 'completed' | 'cancelled';
+  createdBy: IUser | string;
   createdAt: Date;
   updatedAt: Date;
 }
+
+type MongoDBDocument = {
+  _id: mongoose.Types.ObjectId;
+  [key: string]: any;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,28 +64,19 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
-    const formattedPosts = posts.map(post => ({
+    return NextResponse.json((posts as MongoDBDocument[]).map((post) => ({
+      ...post,
       _id: post._id.toString(),
-      title: post.title,
-      currentLocation: post.currentLocation,
-      destination: post.destination,
-      truckType: post.truckType,
-      capacity: post.capacity,
-      price: post.price,
-      description: post.description,
-      availableDate: post.availableDate.toISOString(),
-      status: post.status,
       createdBy: post.createdBy ? {
-        _id: post.createdBy._id.toString(),
-        name: post.createdBy.name,
-        email: post.createdBy.email,
-        phone: post.createdBy.phone
+        _id: (post.createdBy as MongoDBDocument)._id.toString(),
+        name: (post.createdBy as any).name,
+        email: (post.createdBy as any).email,
+        phone: (post.createdBy as any).phone
       } : null,
-      createdAt: post.createdAt.toISOString(),
-      updatedAt: post.updatedAt.toISOString()
-    }));
-
-    return NextResponse.json(formattedPosts);
+      availableDate: new Date(post.availableDate).toISOString(),
+      createdAt: new Date(post.createdAt).toISOString(),
+      updatedAt: new Date(post.updatedAt).toISOString()
+    })));
   } catch (error) {
     console.error('Truck Posts API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -84,19 +87,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    console.log('Received body:', body);
 
     // Validate required fields
     const requiredFields = ['title', 'currentLocation', 'destination', 'truckType', 'capacity', 'price', 'description', 'availableDate'];
     const missingFields = requiredFields.filter(field => !body[field]);
     
     if (missingFields.length > 0) {
-      console.log('Missing fields:', missingFields);
       return NextResponse.json({ 
         error: `Eksik alanlar: ${missingFields.join(', ')}` 
       }, { status: 400 });
@@ -104,23 +105,20 @@ export async function POST(request: NextRequest) {
 
     // Validate data types
     if (typeof body.capacity !== 'number' || isNaN(body.capacity) || body.capacity <= 0) {
-      console.log('Invalid capacity:', body.capacity);
       return NextResponse.json({ 
         error: 'Kapasite pozitif bir sayı olmalıdır' 
       }, { status: 400 });
     }
 
     if (typeof body.price !== 'number' || isNaN(body.price) || body.price <= 0) {
-      console.log('Invalid price:', body.price);
       return NextResponse.json({ 
         error: 'Fiyat pozitif bir sayı olmalıdır' 
       }, { status: 400 });
     }
 
     // Validate truck type
-    const validTruckTypes = ['tir', 'kamyon', 'kamyonet', 'van', 'pickup'];
+    const validTruckTypes = ['tir', 'kamyon', 'kamyonet', 'van', 'pickup'] as const;
     if (!validTruckTypes.includes(body.truckType)) {
-      console.log('Invalid truck type:', body.truckType);
       return NextResponse.json({ 
         error: 'Geçersiz araç tipi' 
       }, { status: 400 });
@@ -129,7 +127,6 @@ export async function POST(request: NextRequest) {
     // Validate date
     const availableDate = new Date(body.availableDate);
     if (isNaN(availableDate.getTime())) {
-      console.log('Invalid date:', body.availableDate);
       return NextResponse.json({ 
         error: 'Geçersiz tarih formatı' 
       }, { status: 400 });
@@ -160,9 +157,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('Connecting to database...');
-    const db = await connectToDatabase();
-    console.log('Database connected:', !!db);
+    await connectToDatabase();
 
     const newPost = new TruckPost({
       title: body.title.trim(),
@@ -177,41 +172,36 @@ export async function POST(request: NextRequest) {
       status: 'active'
     });
     
-    console.log('Saving post...');
-    const savedPost = await newPost.save();
-    console.log('Post saved successfully:', savedPost._id);
-    
-    const formattedPost = {
-      ...savedPost.toObject(),
-      _id: savedPost._id.toString(),
-      createdAt: savedPost.createdAt.toISOString(),
-      updatedAt: savedPost.updatedAt.toISOString()
-    };
-    
-    return NextResponse.json(formattedPost);
-  } catch (error: any) {
-    console.error('Truck Post Creation Error:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      details: error.errors ? JSON.stringify(error.errors) : undefined
+    await newPost.save();
+
+    // Populate the createdBy field
+    const populatedPost = await TruckPost.findById(newPost._id)
+      .populate({
+        path: 'createdBy',
+        select: 'name email phone',
+        model: 'User'
+      })
+      .lean() as MongoDBDocument;
+
+    if (!populatedPost) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ...populatedPost,
+      _id: populatedPost._id.toString(),
+      createdBy: populatedPost.createdBy ? {
+        _id: (populatedPost.createdBy as MongoDBDocument)._id.toString(),
+        name: (populatedPost.createdBy as any).name,
+        email: (populatedPost.createdBy as any).email,
+        phone: (populatedPost.createdBy as any).phone
+      } : null,
+      availableDate: new Date(populatedPost.availableDate).toISOString(),
+      createdAt: new Date(populatedPost.createdAt).toISOString(),
+      updatedAt: new Date(populatedPost.updatedAt).toISOString()
     });
-    
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => err.message);
-      return NextResponse.json({ 
-        error: `Doğrulama hatası: ${validationErrors.join(', ')}` 
-      }, { status: 400 });
-    }
-    
-    if (error.name === 'MongoServerError' && error.code === 11000) {
-      return NextResponse.json({ 
-        error: 'Bu ilan zaten mevcut' 
-      }, { status: 400 });
-    }
-    
-    return NextResponse.json({ 
-      error: `İlan oluşturulurken bir hata oluştu: ${error.message}` 
-    }, { status: 500 });
+  } catch (error) {
+    console.error('Truck Post Creation Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 

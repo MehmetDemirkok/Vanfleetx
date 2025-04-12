@@ -8,17 +8,38 @@ import { CargoPost } from '@/lib/models/cargo-post.model';
 // Explicitly set the runtime to Node.js
 export const runtime = 'nodejs';
 
+interface IUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 interface ICargoPost {
-  _id: mongoose.Types.ObjectId;
-  createdBy: mongoose.Types.ObjectId;
+  _id: string;
   loadingCity: string;
+  loadingAddress: string;
   unloadingCity: string;
+  unloadingAddress: string;
   loadingDate: Date;
   unloadingDate: Date;
-  status: string;
+  vehicleType: string;
+  description?: string;
+  status: 'active' | 'inactive' | 'completed' | 'cancelled';
+  createdBy: IUser | string;
+  weight?: number;
+  volume?: number;
+  price?: number;
+  palletCount?: number;
+  palletType?: string;
   createdAt: Date;
   updatedAt: Date;
 }
+
+type MongoDBDocument = {
+  _id: mongoose.Types.ObjectId;
+  [key: string]: any;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,17 +69,17 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
-    return NextResponse.json(posts.map(post => ({
+    return NextResponse.json((posts as MongoDBDocument[]).map((post) => ({
       ...post,
       _id: post._id.toString(),
       createdBy: post.createdBy ? {
-        _id: post.createdBy._id.toString(),
-        name: post.createdBy.name,
-        email: post.createdBy.email,
-        phone: post.createdBy.phone
+        _id: (post.createdBy as MongoDBDocument)._id.toString(),
+        name: (post.createdBy as any).name,
+        email: (post.createdBy as any).email,
+        phone: (post.createdBy as any).phone
       } : null,
-      createdAt: post.createdAt.toISOString(),
-      updatedAt: post.updatedAt.toISOString()
+      createdAt: new Date(post.createdAt).toISOString(),
+      updatedAt: new Date(post.updatedAt).toISOString()
     })));
   } catch (error) {
     console.error('Cargo Posts API Error:', error);
@@ -76,9 +97,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.loadingCity || !body.unloadingCity || !body.loadingDate) {
+    if (!body.loadingCity || !body.unloadingCity || !body.loadingDate || !body.vehicleType) {
       return NextResponse.json({ 
-        error: 'Eksik bilgi: Yükleme şehri, boşaltma şehri ve yükleme tarihi zorunludur' 
+        error: 'Eksik bilgi: Yükleme şehri, boşaltma şehri, yükleme tarihi ve araç tipi zorunludur' 
       }, { status: 400 });
     }
 
@@ -93,61 +114,51 @@ export async function POST(request: NextRequest) {
     // Create new post
     const newPost = new CargoPost({
       loadingCity: body.loadingCity,
-      loadingAddress: body.loadingAddress,
+      loadingAddress: body.loadingAddress || '',
       unloadingCity: body.unloadingCity,
-      unloadingAddress: body.unloadingAddress,
+      unloadingAddress: body.unloadingAddress || '',
       loadingDate: loadingDate,
       unloadingDate: body.unloadingDate ? new Date(body.unloadingDate) : loadingDate,
-      vehicleType: body.vehicleType || 'tir',
+      vehicleType: body.vehicleType,
       description: body.description,
-      weight: Number(body.weight),
-      volume: Number(body.volume),
-      price: Number(body.price),
+      weight: body.weight ? Number(body.weight) : undefined,
+      volume: body.volume ? Number(body.volume) : undefined,
+      price: body.price ? Number(body.price) : undefined,
       palletCount: body.palletCount ? Number(body.palletCount) : undefined,
       palletType: body.palletType,
-      createdBy: session.user.id,
-      status: 'active'
+      status: 'active',
+      createdBy: session.user.id
     });
 
-    const savedPost = await newPost.save();
+    await newPost.save();
 
-    // Populate creator information
-    const populatedPost = await CargoPost.findById(savedPost._id)
+    // Populate the createdBy field
+    const populatedPost = await CargoPost.findById(newPost._id)
       .populate({
         path: 'createdBy',
         select: 'name email phone',
         model: 'User'
       })
-      .lean();
+      .lean() as MongoDBDocument;
+
+    if (!populatedPost) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
 
     return NextResponse.json({
       ...populatedPost,
       _id: populatedPost._id.toString(),
       createdBy: populatedPost.createdBy ? {
-        _id: populatedPost.createdBy._id.toString(),
-        name: populatedPost.createdBy.name,
-        email: populatedPost.createdBy.email,
-        phone: populatedPost.createdBy.phone
+        _id: (populatedPost.createdBy as MongoDBDocument)._id.toString(),
+        name: (populatedPost.createdBy as any).name,
+        email: (populatedPost.createdBy as any).email,
+        phone: (populatedPost.createdBy as any).phone
       } : null,
-      createdAt: populatedPost.createdAt.toISOString(),
-      updatedAt: populatedPost.updatedAt.toISOString()
+      createdAt: new Date(populatedPost.createdAt).toISOString(),
+      updatedAt: new Date(populatedPost.updatedAt).toISOString()
     });
-  } catch (error: any) {
-    console.error('Cargo Post Creation Error:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
-
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => err.message);
-      return NextResponse.json({ 
-        error: `Doğrulama hatası: ${validationErrors.join(', ')}` 
-      }, { status: 400 });
-    }
-
-    return NextResponse.json({ 
-      error: `İlan oluşturulurken bir hata oluştu: ${error.message}` 
-    }, { status: 500 });
+  } catch (error) {
+    console.error('Cargo Posts API Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 
